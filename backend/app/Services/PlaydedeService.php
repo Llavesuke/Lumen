@@ -12,11 +12,15 @@ class PlaydedeService
     protected $baseUrl;
     protected $cookie;
     protected $headers;
+    protected $puppeteerUrl;
+    protected $requestTimeout = 20; // Timeout para requests HTTP
 
     public function __construct()
     {
         $this->baseUrl = $this->getCurrentDomain();
         $this->cookie = env('PLAYDEDE_COOKIE', 'PLAYDEDE_SESSION=e7792552335cfd7bb16fd4d118978f62; adsCompleted=2; utoken=edcScW33bn5F25uiit5kyyhaUgbkbAF');
+        $this->puppeteerUrl = env('PUPPETEER_SERVICE_URL', 'http://puppeteer:3000');
+        
         Log::info('PlaydedeService initialized with baseUrl: ' . $this->baseUrl);
         Log::debug('Cookie configured: ' . ($this->cookie ? 'Yes' : 'No'));
         
@@ -33,7 +37,7 @@ class PlaydedeService
     {
         try {
             Log::info('Checking current Playdede domain...');
-            $response = Http::get('https://entrarplaydede.com/');
+            $response = Http::timeout($this->requestTimeout)->get('https://entrarplaydede.com/');
             
             if ($response->successful()) {
                 Log::info('Successfully connected to entrarplaydede.com');
@@ -88,7 +92,10 @@ class PlaydedeService
             if (count($searchResults) === 1) {
                 $url = $searchResults[0];
                 Log::info('Found exactly one result, using URL: ' . $url);
-                return $this->getPlayerItems($url);
+                $m3u8Url = $this->processContentUrl($url);
+                if ($m3u8Url) {
+                    return ['m3u8url' => $m3u8Url];
+                }
             }
             
             // If we found no results or multiple results, try with tmdb_id
@@ -104,13 +111,41 @@ class PlaydedeService
 
             // If it's a series/anime and we have season/episode info
             if (($type === 'series' || $type === 'anime') && $season !== null && $episode !== null) {
-                return $this->getEpisodeSources($formattedTitle, $tmdbId, $season, $episode);
+                $result = $this->getEpisodeSources($formattedTitle, $tmdbId, $season, $episode);
+                if (isset($result['m3u8url']) && $result['m3u8url']) {
+                    return $result;
+                }
             }
 
             // Use the first result
             $url = $searchResults[0];
             Log::info('Using first result URL: ' . $url);
-            return $this->getPlayerItems($url);
+            $m3u8Url = $this->processContentUrl($url);
+            
+            // Si encontramos una URL, devolverla
+            if ($m3u8Url) {
+                return ['m3u8url' => $m3u8Url];
+            }
+            
+            // Si llegamos hasta aquí y no hay URL, buscar en los siguientes resultados
+            if (count($searchResults) > 1) {
+                Log::info('First result did not provide m3u8 URL, trying other results...');
+                
+                // Intentar hasta 3 resultados más
+                for ($i = 1; $i < min(4, count($searchResults)); $i++) {
+                    $url = $searchResults[$i];
+                    Log::info("Trying alternative result #{$i}: {$url}");
+                    $m3u8Url = $this->processContentUrl($url);
+                    
+                    if ($m3u8Url) {
+                        Log::info("Found m3u8 URL from alternative result #{$i}");
+                        return ['m3u8url' => $m3u8Url];
+                    }
+                }
+            }
+            
+            Log::warning('No valid m3u8 URL found after trying all search results');
+            return ['error' => 'No valid sources found'];
 
         } catch (\Exception $e) {
             Log::error('Error getting show sources: ' . $e->getMessage());
@@ -128,22 +163,27 @@ class PlaydedeService
             // First attempt without tmdb_id
             $episodeUrl = "{$this->baseUrl}/episodios/{$formattedTitle}-{$season}x{$episode}/";
             Log::info('Attempting to get episode sources from: ' . $episodeUrl);
-            $sources = $this->getPlayerItems($episodeUrl);
+            $m3u8Url = $this->processContentUrl($episodeUrl);
             
-            if (empty($sources)) {
-                // Second attempt with tmdb_id
-                $episodeUrl = "{$this->baseUrl}/episodios/{$formattedTitle}_{$tmdbId}-{$season}x{$episode}/";
-                Log::info('No sources found, trying with TMDB ID: ' . $episodeUrl);
-                $sources = $this->getPlayerItems($episodeUrl);
+            if ($m3u8Url) {
+                return ['m3u8url' => $m3u8Url];
             }
             
-            if (empty($sources)) {
-                Log::warning('No sources found for episode');
-                return ['error' => 'No sources found'];
+            // Second attempt with tmdb_id
+            $episodeUrl = "{$this->baseUrl}/episodios/{$formattedTitle}_{$tmdbId}-{$season}x{$episode}/";
+            Log::info('No sources found, trying with TMDB ID: ' . $episodeUrl);
+            $m3u8Url = $this->processContentUrl($episodeUrl);
+            
+            if ($m3u8Url) {
+                return ['m3u8url' => $m3u8Url];
             }
             
-            Log::info('Found ' . count($sources) . ' sources for episode');
-            return ['sources' => $sources];
+            // Tercer intento con otra estructura de URL
+            $episodeUrl = "{$this->baseUrl}/serie/{$formattedTitle}/temporada-{$season}/capitulo-{$episode}";
+            Log::info('Trying alternative URL structure: ' . $episodeUrl);
+            $m3u8Url = $this->processContentUrl($episodeUrl);
+            
+            return ['m3u8url' => $m3u8Url];
 
         } catch (\Exception $e) {
             Log::error('Error getting episode sources: ' . $e->getMessage());
@@ -168,9 +208,12 @@ class PlaydedeService
             
             Log::info('Making request to URL: ' . $searchUrl);
             
-            $response = Http::withOptions([
-                'verify' => false,
-            ])->withHeaders($this->headers)->get($searchUrl);
+            $response = Http::timeout($this->requestTimeout)
+                ->withOptions([
+                    'verify' => false,
+                ])
+                ->withHeaders($this->headers)
+                ->get($searchUrl);
             
             Log::info('Search response status: ' . $response->status());
             
@@ -225,9 +268,69 @@ class PlaydedeService
     }
 
     /**
-     * Get player items from a specific URL
+     * Process content URL to get m3u8 URL
+     * New method that handles getting player URLs and processing them sequentially
      */
-    protected function getPlayerItems($url)
+    protected function processContentUrl($url)
+    {
+        try {
+            $playerUrls = $this->getPlayerUrls($url);
+            
+            if (empty($playerUrls)) {
+                Log::warning('No player URLs found');
+                return null;
+            }
+            
+            $playerCount = count($playerUrls);
+            Log::info("Found {$playerCount} player URLs. Processing sequentially.");
+            
+            // Set a shorter timeout per player
+            $timeoutPerPlayer = 12; // 12 seconds per player
+            
+            // Iterate through each player URL until we find a valid m3u8 URL
+            foreach ($playerUrls as $index => $playerUrl) {
+                $current = $index + 1;
+                Log::info("Processing player URL {$current}/{$playerCount}: {$playerUrl}");
+                
+                try {
+                    // Set up timeout for this player attempt
+                    $startTime = microtime(true);
+                    
+                    // Try to get m3u8 URL with timeout
+                    $m3u8Url = $this->getM3u8UrlFromPlayer($playerUrl);
+                    
+                    // If we got a valid URL, return it immediately
+                    if ($m3u8Url) {
+                        Log::info("Found valid m3u8 URL from player {$current}: {$m3u8Url}");
+                        return $m3u8Url;
+                    }
+                    
+                    // Check if we've exceeded our per-player timeout
+                    if ((microtime(true) - $startTime) > $timeoutPerPlayer) {
+                        Log::warning("Player {$current} exceeded timeout limit");
+                        continue;
+                    }
+                    
+                    Log::info("No valid m3u8 URL from player {$current}, trying next player if available");
+                } catch (\Exception $playerException) {
+                    Log::warning("Error processing player {$current}: " . $playerException->getMessage());
+                    continue;
+                }
+            }
+            
+            Log::warning('No valid m3u8 URL found from any player');
+            return null;
+            
+        } catch (\Exception $e) {
+            Log::error('Error processing content URL: ' . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Get player URLs from content page
+     */
+    protected function getPlayerUrls($url)
     {
         try {
             // URL encoding properly
@@ -238,14 +341,17 @@ class PlaydedeService
                 $url = $parsedUrl['scheme'] . '://' . $parsedUrl['host'] . $parsedUrl['path'] . '?' . $encodedQuery;
             }
             
-            Log::info('Getting player items from URL: ' . $url);
+            Log::info('Getting player URLs from content: ' . $url);
             
-            $response = Http::withOptions([
-                'verify' => false, // Disable SSL verification temporarily
-            ])->withHeaders($this->headers)->get($url);
+            $response = Http::timeout($this->requestTimeout)
+                ->withOptions([
+                    'verify' => false,
+                ])
+                ->withHeaders($this->headers)
+                ->get($url);
             
             if (!$response->successful()) {
-                Log::error('Failed to get player items. Status: ' . $response->status());
+                Log::error('Failed to get player URLs. Status: ' . $response->status());
                 Log::debug('Response body: ' . $response->body());
                 return [];
             }
@@ -257,34 +363,40 @@ class PlaydedeService
             Log::info('Looking for Spanish language player items');
             $playerItems = $xpath->query("//div[contains(@class, 'playerItem') and @data-lang='esp']");
             
-            $sources = [];
+            // Si no hay reproductores en español, intentar con cualquier idioma
+            if ($playerItems->length === 0) {
+                Log::info('No Spanish players found, trying any language');
+                $playerItems = $xpath->query("//div[contains(@class, 'playerItem')]");
+            }
+            
+            $playerUrls = [];
             foreach ($playerItems as $item) {
                 $dataLoadPlayer = $item->getAttribute('data-loadplayer');
                 if ($dataLoadPlayer) {
-                    Log::info('Found player data: ' . $dataLoadPlayer);
                     $embedUrl = "{$this->baseUrl}/embed.php?id={$dataLoadPlayer}&width=752&height=585";
-                    $videoSrc = $this->getVideoSource($embedUrl);
-                    if ($videoSrc) {
-                        Log::info('Found video source: ' . $videoSrc);
-                        $sources[] = $videoSrc;
+                    $actualPlayerUrl = $this->getActualPlayerUrl($embedUrl);
+                    
+                    if ($actualPlayerUrl) {
+                        Log::info('Found player URL: ' . $actualPlayerUrl);
+                        $playerUrls[] = $actualPlayerUrl;
                     }
                 }
             }
             
-            Log::info('Found ' . count($sources) . ' video sources');
-            return ['sources' => $sources];
+            Log::info('Found ' . count($playerUrls) . ' player URLs');
+            return $playerUrls;
 
         } catch (\Exception $e) {
-            Log::error('Error getting player items: ' . $e->getMessage());
+            Log::error('Error getting player URLs: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
             return [];
         }
     }
 
     /**
-     * Get video source from embed URL
+     * Get actual player URL from embed URL
      */
-    protected function getVideoSource($embedUrl)
+    protected function getActualPlayerUrl($embedUrl)
     {
         try {
             // URL encoding properly
@@ -295,14 +407,17 @@ class PlaydedeService
                 $embedUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'] . $parsedUrl['path'] . '?' . $encodedQuery;
             }
             
-            Log::info('Getting video source from URL: ' . $embedUrl);
+            Log::info('Getting actual player URL from embed: ' . $embedUrl);
             
-            $response = Http::withOptions([
-                'verify' => false,
-            ])->withHeaders($this->headers)->get($embedUrl);
+            $response = Http::timeout($this->requestTimeout)
+                ->withOptions([
+                    'verify' => false,
+                ])
+                ->withHeaders($this->headers)
+                ->get($embedUrl);
             
             if (!$response->successful()) {
-                Log::error('Failed to get video source. Status: ' . $response->status());
+                Log::error('Failed to get actual player URL. Status: ' . $response->status());
                 Log::debug('Response body: ' . $response->body());
                 return null;
             }
@@ -312,7 +427,7 @@ class PlaydedeService
             // Buscar la variable url en el script
             if (preg_match('/var\s+url\s*=\s*"([^"]+)"/', $html, $matches)) {
                 $playerUrl = $matches[1];
-                Log::info('Found player URL: ' . $playerUrl);
+                Log::info('Found actual player URL: ' . $playerUrl);
                 return $playerUrl;
             }
             
@@ -320,8 +435,205 @@ class PlaydedeService
             return null;
 
         } catch (\Exception $e) {
-            Log::error('Error getting video source: ' . $e->getMessage());
+            Log::error('Error getting actual player URL: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
+            return null;
+        }
+    }
+
+    /**
+     * Get m3u8 URL from player URL using Puppeteer service
+     * Mejorada para garantizar que no se quede colgada y siempre responda
+     */
+    protected function getM3u8UrlFromPlayer($playerUrl)
+    {
+        try {
+            if (empty($playerUrl)) {
+                Log::warning('Empty player URL provided');
+                return null;
+            }
+            
+            // Sanitizar URL para evitar problemas con caracteres especiales
+            $playerUrl = $this->sanitizePlayerUrl($playerUrl);
+            
+            Log::info('Calling Puppeteer service to extract m3u8 URL from player: ' . $playerUrl);
+            
+            // Utilizar un timeout más estricto para el servicio Puppeteer
+            $response = Http::timeout(15)  // Reduced from 18 to 15 seconds
+                ->withOptions([
+                    'connect_timeout' => 5, // 5 segundos para la conexión
+                ])
+                ->post($this->puppeteerUrl . '/extract-m3u8', [
+                    'playerUrl' => $playerUrl
+                ]);
+            
+            if (!$response->successful()) {
+                Log::error('Puppeteer request failed. Status: ' . $response->status());
+                return null;
+            }
+            
+            $data = $response->json();
+            
+            if (isset($data['url']) && !empty($data['url'])) {
+                $m3u8Url = $data['url'];
+                
+                // Sanitizar la URL m3u8
+                $m3u8Url = $this->sanitizeM3u8Url($m3u8Url);
+                
+                // Verify this is a valid m3u8 URL
+                if (strpos($m3u8Url, '.m3u8') !== false) {
+                    Log::info('Valid m3u8 URL extracted: ' . $m3u8Url);
+                    return $m3u8Url;
+                } else {
+                    Log::warning('URL returned by Puppeteer is not a valid m3u8 URL: ' . $m3u8Url);
+                }
+            }
+            
+            Log::warning('No m3u8 URL returned by Puppeteer service');
+            
+            // Intentar llamar directamente al playerUrl y buscar el m3u8 manualmente
+            $m3u8Url = $this->fallbackExtractM3u8($playerUrl);
+            if ($m3u8Url) {
+                Log::info('Found m3u8 URL via fallback method: ' . $m3u8Url);
+                return $m3u8Url;
+            }
+            
+            return null;
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting m3u8 URL from player: ' . $e->getMessage());
+            
+            // Intento de recuperación en caso de timeout
+            if (strpos($e->getMessage(), 'timeout') !== false || strpos($e->getMessage(), 'Connection timed out') !== false) {
+                Log::info('Timeout occurred, trying fallback method');
+                try {
+                    $m3u8Url = $this->fallbackExtractM3u8($playerUrl);
+                    if ($m3u8Url) {
+                        Log::info('Found m3u8 URL via fallback method after timeout: ' . $m3u8Url);
+                        return $m3u8Url;
+                    }
+                } catch (\Exception $fallbackError) {
+                    Log::error('Fallback extraction failed: ' . $fallbackError->getMessage());
+                }
+            }
+            
+            return null;
+        }
+    }
+    
+    /**
+     * Sanitiza una URL de player antes de enviarla a Puppeteer
+     */
+    protected function sanitizePlayerUrl($url)
+    {
+        if (empty($url)) return null;
+        
+        try {
+            // Decodificar y luego volver a codificar correctamente la URL
+            $url = urldecode($url);
+            
+            // Asegurar que ciertos dominios problemáticos estén bien formateados
+            if (strpos($url, 'vespucciland') !== false || strpos($url, 'sploosat') !== false || 
+                strpos($url, 'iplayerhls') !== false) {
+                $parsedUrl = parse_url($url);
+                if (isset($parsedUrl['query'])) {
+                    parse_str($parsedUrl['query'], $queryParams);
+                    
+                    // Reconstruir la URL con parámetros correctamente codificados
+                    $url = $parsedUrl['scheme'] . '://' . $parsedUrl['host'] . $parsedUrl['path'] . '?' . http_build_query($queryParams);
+                }
+            }
+            
+            return $url;
+        } catch (\Exception $e) {
+            // Fix: Correct string concatenation syntax
+            Log::error('Error sanitizing player URL: ' . $e->getMessage());
+            return $url;
+        }
+    }
+    
+    /**
+     * Sanitiza una URL m3u8 para asegurar su validez
+     */
+    protected function sanitizeM3u8Url($url)
+    {
+        if (empty($url)) return null;
+        
+        try {
+            // Decodificar la URL para evitar doble codificación
+            $url = urldecode($url);
+            
+            // Asegurar que la URL m3u8 esté bien formateada
+            $parsedUrl = parse_url($url);
+            if ($parsedUrl && isset($parsedUrl['scheme']) && isset($parsedUrl['host'])) {
+                // Reconstruir la URL correctamente
+                $basePath = $parsedUrl['scheme'] . '://' . $parsedUrl['host'];
+                if (isset($parsedUrl['path'])) {
+                    $basePath .= $parsedUrl['path'];
+                }
+                
+                // Reconstruir los query params si existen
+                if (isset($parsedUrl['query'])) {
+                    parse_str($parsedUrl['query'], $queryParams);
+                    $basePath .= '?' . http_build_query($queryParams);
+                }
+                
+                // Añadir el fragmento si existe
+                if (isset($parsedUrl['fragment'])) {
+                    $basePath .= '#' . $parsedUrl['fragment'];
+                }
+                
+                $url = $basePath;
+            }
+            
+            return $url;
+        } catch (\Exception $e) {
+            Log::error('Error sanitizing m3u8 URL: ' . $e->getMessage());
+            return $url;
+        }
+    }
+    
+    /**
+     * Método alternativo para intentar extraer una URL m3u8 directamente
+     */
+    protected function fallbackExtractM3u8($playerUrl)
+    {
+        try {
+            $response = Http::timeout(8) // Timeout más corto para el fallback
+                ->withOptions([
+                    'verify' => false,
+                    'connect_timeout' => 3,
+                ])
+                ->withHeaders($this->headers)
+                ->get($playerUrl);
+            
+            if (!$response->successful()) {
+                return null;
+            }
+            
+            $html = $response->body();
+            
+            // Buscar patrones comunes de URLs m3u8
+            $patterns = [
+                '/source\s*src=[\'"]([^\'"]*.m3u8[^\'"]*)[\'"]/',
+                '/file\s*:\s*[\'"]([^\'"]*.m3u8[^\'"]*)[\'"]/',
+                '/source\s*:\s*[\'"]([^\'"]*.m3u8[^\'"]*)[\'"]/',
+                '/src\s*:\s*[\'"]([^\'"]*.m3u8[^\'"]*)[\'"]/',
+                '/[\'"]([^\'"]*.m3u8[^\'"]*)[\'"]/'
+            ];
+            
+            foreach ($patterns as $pattern) {
+                if (preg_match($pattern, $html, $matches)) {
+                    $m3u8Url = $matches[1];
+                    if (!empty($m3u8Url)) {
+                        return $this->sanitizeM3u8Url($m3u8Url);
+                    }
+                }
+            }
+            
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Error in fallback m3u8 extraction: ' . $e->getMessage());
             return null;
         }
     }

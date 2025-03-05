@@ -52,6 +52,17 @@ services:
     depends_on:
       - app
 
+  puppeteer:
+    build:
+      context: ./backend/puppeteer-service
+      dockerfile: Dockerfile
+    container_name: lumen_puppeteer
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - lumen
+
 networks:
   lumen:
     driver: bridge

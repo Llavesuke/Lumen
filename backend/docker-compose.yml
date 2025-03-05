@@ -39,6 +39,17 @@ services:
       - ./docker/nginx/:/etc/nginx/conf.d/
     networks:
       - laravel
+      
+  puppeteer:
+    build:
+      context: ./puppeteer-service
+      dockerfile: Dockerfile
+    container_name: puppeteer_service
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - laravel
 
 networks:
   laravel:
