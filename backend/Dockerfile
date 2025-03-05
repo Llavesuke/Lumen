@@ -16,7 +16,8 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
-    libzip-dev
+    libzip-dev \
+    netcat-traditional
 
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -33,15 +34,23 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN groupadd -g 1000 www
 RUN useradd -u 1000 -ms /bin/bash -g www www
 
-# Copy existing application directory contents
-COPY . /var/www
+# Create necessary directories and set permissions
+RUN mkdir -p /var/www/storage/framework/{cache,sessions,views} \
+    && mkdir -p /var/www/storage/logs
 
-# Copy existing application directory permissions
+# Copy entrypoint script
+COPY docker/entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Copy existing application directory contents and set permissions
 COPY --chown=www:www . /var/www
+RUN chmod -R 775 /var/www/storage
 
 # Change current user to www
 USER www
 
-# Expose port 9000 and start php-fpm server
+# Expose port 9000
 EXPOSE 9000
-CMD ["php-fpm"]
+
+# Set entrypoint
+ENTRYPOINT ["entrypoint.sh"]
