@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\ShowController;
 use App\Http\Controllers\ShowListController;
+use App\Http\Controllers\PlaydedeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,5 +50,11 @@ Route::prefix('v1')->group(function () {
             Route::post('/', [ShowController::class, 'addToFavorites']);
             Route::delete('/{tmdbId}', [ShowController::class, 'removeFromFavorites']);
         });
+    });
+
+    // Playdede Routes
+    Route::prefix('playdede')->group(function () {
+        Route::get('/movie', [PlaydedeController::class, 'getMovieSources']);
+        Route::get('/series', [PlaydedeController::class, 'getSeriesEpisodeSources']);
     });
 });
