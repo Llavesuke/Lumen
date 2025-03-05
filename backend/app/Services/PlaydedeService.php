@@ -298,7 +298,7 @@ class PlaydedeService
             Log::info('Getting video source from URL: ' . $embedUrl);
             
             $response = Http::withOptions([
-                'verify' => false, // Disable SSL verification temporarily
+                'verify' => false,
             ])->withHeaders($this->headers)->get($embedUrl);
             
             if (!$response->successful()) {
@@ -307,19 +307,16 @@ class PlaydedeService
                 return null;
             }
 
-            $dom = new DOMDocument();
-            @$dom->loadHTML($response->body(), LIBXML_NOERROR);
-            $xpath = new DOMXPath($dom);
+            $html = $response->body();
             
-            $videoElement = $xpath->query("//video[contains(@class, 'jw-video') and contains(@class, 'jw-reset')]")->item(0);
-            
-            if ($videoElement) {
-                $src = $videoElement->getAttribute('src');
-                Log::info('Found video src: ' . $src);
-                return $src;
+            // Buscar la variable url en el script
+            if (preg_match('/var\s+url\s*=\s*"([^"]+)"/', $html, $matches)) {
+                $playerUrl = $matches[1];
+                Log::info('Found player URL: ' . $playerUrl);
+                return $playerUrl;
             }
             
-            Log::warning('No video element found in embed page');
+            Log::warning('No player URL found in embed page');
             return null;
 
         } catch (\Exception $e) {
