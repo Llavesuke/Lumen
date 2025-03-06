@@ -127,13 +127,10 @@ class PlaydedeController extends Controller
      */
     public function getSeriesEpisodeSources(Request $request)
     {
-        // Modificar esta función de manera similar a getMovieSources
         // Configurar timeout
         set_time_limit($this->globalTimeout);
         
-        // Iniciar temporizador
         $startTime = microtime(true);
-        
         Log::info('Getting series episode sources for request', $request->all());
         
         $validator = Validator::make($request->all(), [
@@ -148,217 +145,45 @@ class PlaydedeController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Crear una bandera para seguir si la respuesta ya fue enviada
-        $GLOBALS['responseSent'] = false;
-
         try {
             // Decode the title in case it comes URL encoded
             $decodedTitle = urldecode($request->title);
             $formattedTitle = ShowList::formatTitle($decodedTitle);
             Log::info('Original title: ' . $request->title);
             Log::info('Formatted title: ' . $formattedTitle);
+
+            // Obtener resultado del servicio de manera síncrona
+            $result = $this->playdedeService->getShowSources(
+                $formattedTitle,
+                $request->tmdb_id,
+                'series',
+                $request->season,
+                $request->episode
+            );
             
-            // Registrar un shutdown handler para capturar timeouts
-            register_shutdown_function(function () use ($startTime) {
-                if (!$GLOBALS['responseSent']) {
-                    $executionTime = round(microtime(true) - $startTime, 2);
-                    Log::warning("Request ended with no response sent ({$executionTime}s)");
-                    
-                    // Intentar recuperar URL desde logs
-                    try {
-                        $m3u8Url = $this->tryRetrieveFromLogs();
-                        if ($m3u8Url) {
-                            Log::info('Emergency recovery: URL found in logs: ' . $m3u8Url);
-                            // Intentar enviar la respuesta como último recurso
-                            if (!headers_sent()) {
-                                http_response_code(200);
-                                header('Content-Type: application/json');
-                                echo json_encode(['url' => $m3u8Url]);
-                                $GLOBALS['responseSent'] = true;
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        Log::error('Emergency log check failed: ' . $e->getMessage());
-                    }
-                }
-            });
-            
-            try {
-                Log::info('Calling PlaydedeService to get series episode sources');
+            // Verificar si tenemos una URL m3u8
+            if (isset($result['m3u8url']) && $result['m3u8url']) {
+                $m3u8Url = $result['m3u8url'];
+                $executionTime = round(microtime(true) - $startTime, 2);
                 
-                // Crear un objeto Promise para manejar la respuesta asíncrona
-                $responsePromise = null;
-                
-                // Ejecutar en un proceso separado para poder enviar la respuesta lo antes posible
-                $pid = pcntl_fork();
-                
-                // Error en fork
-                if ($pid == -1) {
-                    throw new \Exception("No se pudo crear un proceso fork");
-                } 
-                // Proceso hijo
-                else if ($pid == 0) {
-                    try {
-                        // Obtener resultado del servicio
-                        $result = $this->playdedeService->getShowSources(
-                            $formattedTitle,
-                            $request->tmdb_id,
-                            'series',
-                            $request->season,
-                            $request->episode
-                        );
-                        
-                        // Verificar si tenemos una URL m3u8
-                        if (isset($result['m3u8url']) && $result['m3u8url']) {
-                            $m3u8Url = $result['m3u8url'];
-                            $executionTime = round(microtime(true) - $startTime, 2);
-                            
-                            Log::info('Valid m3u8 URL found for episode', [
-                                'm3u8_url' => $m3u8Url,
-                                'execution_time' => $executionTime . ' seconds'
-                            ]);
-                            
-                            // Enviar la respuesta inmediatamente
-                            if (!headers_sent()) {
-                                http_response_code(200);
-                                header('Content-Type: application/json');
-                                echo json_encode(['url' => $m3u8Url]);
-                            }
-                        } else {
-                            // Manejar error o no resultados
-                            $error = isset($result['error']) ? $result['error'] : 'No valid sources found';
-                            
-                            if (!headers_sent()) {
-                                http_response_code(404);
-                                header('Content-Type: application/json');
-                                echo json_encode(['error' => $error]);
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        Log::error('Error in child process: ' . $e->getMessage());
-                        
-                        if (!headers_sent()) {
-                            http_response_code(500);
-                            header('Content-Type: application/json');
-                            echo json_encode(['error' => 'Internal server error']);
-                        }
-                    }
-                    
-                    // El proceso hijo debe terminar
-                    exit(0);
-                }
-                // Proceso padre
-                else {
-                    // El proceso padre debe enviar una respuesta lo más rápido posible
-                    // mientras el proceso hijo busca la URL m3u8
-                    
-                    // Esperar un breve periodo para ver si el proceso hijo encuentra algo rápidamente
-                    usleep(100000); // 100ms
-                    
-                    // Configuramos el proceso para no esperar al hijo
-                    pcntl_signal(SIGCHLD, SIG_IGN);
-                    
-                    // Si la respuesta no se ha enviado ya, enviar una respuesta inmediata
-                    if (!$GLOBALS['responseSent']) {
-                        $m3u8Url = $this->tryRetrieveFromLogs();
-                        
-                        if ($m3u8Url) {
-                            Log::info('Found m3u8 URL in logs for quick response: ' . $m3u8Url);
-                            $GLOBALS['responseSent'] = true;
-                            return response()->json(['url' => $m3u8Url]);
-                        }
-                        
-                        // Si todavía no hay URL, enviar una respuesta al cliente indicando que el proceso está en curso
-                        Log::info('Sending immediate response while processing continues in background');
-                        $GLOBALS['responseSent'] = true;
-                        // Enviamos un código 202 - Accepted para indicar que la petición está siendo procesada
-                        return response()->json([
-                            'status' => 'processing',
-                            'message' => 'Request is being processed, please check again shortly'
-                        ], 202);
-                    }
-                }
-                
-                // Si ya se envió una respuesta, salir del proceso padre también
-                exit(0);
-                
-            } catch (ParseError $parseError) {
-                // Capturar específicamente errores de sintaxis de PHP
-                $errorTime = round(microtime(true) - $startTime, 2);
-                Log::error('PHP Parse Error in PlaydedeService for episode', [
-                    'message' => $parseError->getMessage(),
-                    'file' => $parseError->getFile(),
-                    'line' => $parseError->getLine(),
-                    'execution_time' => $errorTime . ' seconds'
+                Log::info('Valid m3u8 URL found for episode', [
+                    'm3u8_url' => $m3u8Url,
+                    'execution_time' => $executionTime . ' seconds'
                 ]);
                 
-                // Intentar recuperar desde los logs como último recurso
-                $m3u8Url = $this->tryRetrieveFromLogs();
-                if ($m3u8Url) {
-                    Log::info('Recovered m3u8 URL from logs after parse error for episode', [
-                        'url' => $m3u8Url
-                    ]);
-                    $GLOBALS['responseSent'] = true;
-                    return response()->json(['url' => $m3u8Url]);
-                }
-                
-                $GLOBALS['responseSent'] = true;
-                return response()->json([
-                    'error' => 'Se produjo un error de sintaxis al procesar la solicitud.'
-                ], 500);
-            } catch (Error $error) {
-                // Capturar errores fatales de PHP
-                $errorTime = round(microtime(true) - $startTime, 2);
-                Log::error('PHP Error in PlaydedeService for episode', [
-                    'message' => $error->getMessage(),
-                    'file' => $error->getFile(),
-                    'line' => $error->getLine(),
-                    'execution_time' => $errorTime . ' seconds'
-                ]);
-                
-                // Intentar recuperar desde los logs como último recurso
-                $m3u8Url = $this->tryRetrieveFromLogs();
-                if ($m3u8Url) {
-                    Log::info('Recovered m3u8 URL from logs after PHP error for episode', [
-                        'url' => $m3u8Url
-                    ]);
-                    $GLOBALS['responseSent'] = true;
-                    return response()->json(['url' => $m3u8Url]);
-                }
-                
-                $GLOBALS['responseSent'] = true;
-                return response()->json(['error' => 'Error processing request'], 500);
-            } catch (Throwable $serviceError) {
-                $errorTime = round(microtime(true) - $startTime, 2);
-                Log::error('Error in PlaydedeService for episode', [
-                    'message' => $serviceError->getMessage(),
-                    'execution_time' => $errorTime . ' seconds',
-                    'file' => $serviceError->getFile(),
-                    'line' => $serviceError->getLine()
-                ]);
-                
-                // Verificar si el error es por timeout
-                $isTimeout = strpos($serviceError->getMessage(), 'timeout') !== false || 
-                             strpos($serviceError->getMessage(), 'timed out') !== false;
-                
-                if ($isTimeout) {
-                    Log::warning('Timeout error detected for episode, checking logs for valid m3u8 URL');
-                }
-                
-                // Intentar recuperar desde los logs como último recurso
-                $m3u8Url = $this->tryRetrieveFromLogs();
-                if ($m3u8Url) {
-                    Log::info('Recovered m3u8 URL from logs after service error for episode', [
-                        'url' => $m3u8Url
-                    ]);
-                    $GLOBALS['responseSent'] = true;
-                    return response()->json(['url' => $m3u8Url]);
-                }
-                
-                $GLOBALS['responseSent'] = true;
-                return response()->json(['error' => 'Error processing request'], 500);
+                return response()->json(['url' => $m3u8Url]);
             }
-            
+
+            // Si no se encontró URL, intentar recuperar de los logs
+            $m3u8Url = $this->tryRetrieveFromLogs();
+            if ($m3u8Url) {
+                Log::info('Recovered m3u8 URL from logs for episode');
+                return response()->json(['url' => $m3u8Url]);
+            }
+
+            // Si no se encuentra nada, devolver null
+            return response()->json(['url' => null]);
+
         } catch (Throwable $e) {
             Log::error('Error in getSeriesEpisodeSources controller: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
@@ -368,15 +193,11 @@ class PlaydedeController extends Controller
             // Último intento de recuperación
             $m3u8Url = $this->tryRetrieveFromLogs();
             if ($m3u8Url) {
-                Log::info('Recovered m3u8 URL from logs after controller error for episode', [
-                    'url' => $m3u8Url
-                ]);
-                $GLOBALS['responseSent'] = true;
+                Log::info('Recovered m3u8 URL from logs after controller error for episode');
                 return response()->json(['url' => $m3u8Url]);
             }
             
-            $GLOBALS['responseSent'] = true;
-            return response()->json(['error' => 'Internal server error'], 500);
+            return response()->json(['url' => null]);
         }
     }
 
