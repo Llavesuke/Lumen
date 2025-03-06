@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -60,25 +62,87 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        $request->validate([
-            'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string'],
-        ]);
-
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+        try {
+            $request->validate([
+                'email' => ['required', 'string', 'email'],
+                'password' => ['required', 'string'],
             ]);
+
+            // Check if user exists
+            $user = User::where('email', $request->email)->first();
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Error de autenticación',
+                    'errors' => [
+                        'email' => ['El usuario no está registrado en el sistema.']
+                    ]
+                ], 401);
+            }
+
+            // Check if password is correct
+            if (!Hash::check($request->password, $user->password)) {
+                return response()->json([
+                    'message' => 'Error de autenticación',
+                    'errors' => [
+                        'password' => ['La contraseña ingresada es incorrecta.']
+                    ]
+                ], 401);
+            }
+
+            // Check if user account is active (assuming there's an 'active' field)
+            // Uncomment if you have an active status field
+            /*
+            if (!$user->active) {
+                return response()->json([
+                    'message' => 'Authentication failed',
+                    'errors' => [
+                        'account' => ['Su cuenta está desactivada. Por favor contacte al administrador.']
+                    ]
+                ], 403);
+            }
+            */
+
+            // Authentication successful
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return response()->json([
+                'message' => 'Inicio de sesión exitoso',
+                'user' => $user,
+                'token' => $token,
+            ], 200);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (QueryException $e) {
+            Log::error('Database error during login: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error de conexión',
+                'errors' => [
+                    'database' => ['Error al conectar con la base de datos. Por favor intente nuevamente más tarde.']
+                ]
+            ], 503);
+        } catch (\Exception $e) {
+            Log::error('Login error: ' . $e->getMessage());
+            
+            // Check if it's a timeout error
+            if (str_contains($e->getMessage(), 'timeout') || $e->getCode() == 504) {
+                return response()->json([
+                    'message' => 'Error de tiempo de espera',
+                    'errors' => [
+                        'timeout' => ['La solicitud ha excedido el tiempo de espera. Por favor intente nuevamente.']
+                    ]
+                ], 504);
+            }
+            
+            return response()->json([
+                'message' => 'Error de inicio de sesión',
+                'errors' => [
+                    'general' => ['Ha ocurrido un error durante el inicio de sesión. Por favor intente nuevamente.']
+                ]
+            ], 500);
         }
-
-        $user = $request->user();
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Logged in successfully',
-            'user' => $user,
-            'token' => $token,
-        ]);
     }
 
     /**

@@ -38,8 +38,10 @@ Route::prefix('v1')->group(function () {
         Route::prefix('lists')->group(function () {
             Route::post('/', [ShowListController::class, 'createList']);
             Route::get('/', [ShowListController::class, 'getUserLists']);
+            Route::get('/public', [ShowListController::class, 'getPublicLists']);
             Route::get('/{listId}', [ShowListController::class, 'getList']);
             Route::post('/{listId}/shows', [ShowListController::class, 'addShowToList']);
+            Route::post('/{listId}/toggle-public', [ShowListController::class, 'togglePublicStatus']);
             Route::delete('/{listId}/shows/{tmdbId}', [ShowListController::class, 'removeShowFromList']);
             Route::delete('/{listId}', [ShowListController::class, 'deleteList']);
         });

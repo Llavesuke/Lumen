@@ -131,10 +131,10 @@ class ShowController extends Controller
         $user = Auth::user();
         $favorites = $user->user_favorites ?? [];
 
-        // Verificar si el show ya está en favoritos
+        // Verificar si el show ya está en favoritos (validando tmdb_id y tipo)
         $exists = false;
         foreach ($favorites as $favorite) {
-            if ($favorite['tmdb_id'] === $request->tmdb_id) {
+            if ($favorite['tmdb_id'] === $request->tmdb_id && $favorite['type'] === $request->type) {
                 $exists = true;
                 break;
             }
@@ -163,12 +163,20 @@ class ShowController extends Controller
      * @param int $tmdbId
      * @return \Illuminate\Http\JsonResponse
      */
-    public function removeFromFavorites($tmdbId)
+    public function removeFromFavorites(Request $request, $tmdbId)
     {
         $user = Auth::user();
         $favorites = $user->user_favorites ?? [];
-
-        $favorites = array_filter($favorites, function($show) use ($tmdbId) {
+        
+        // Get the show type from request query parameters
+        $showType = $request->query('type');
+        
+        $favorites = array_filter($favorites, function($show) use ($tmdbId, $showType) {
+            // If type is provided, filter by both tmdb_id and type
+            if ($showType) {
+                return !($show['tmdb_id'] === $tmdbId && $show['type'] === $showType);
+            }
+            // Otherwise, just filter by tmdb_id for backward compatibility
             return $show['tmdb_id'] !== $tmdbId;
         });
 

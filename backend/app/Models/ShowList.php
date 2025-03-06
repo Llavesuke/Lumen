@@ -13,11 +13,13 @@ class ShowList extends Model
         'user_id',
         'title',
         'description',
-        'shows'
+        'shows',
+        'is_public'
     ];
 
     protected $casts = [
-        'shows' => 'array'
+        'shows' => 'array',
+        'is_public' => 'boolean'
     ];
     
     public function user()

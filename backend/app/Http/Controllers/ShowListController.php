@@ -19,26 +19,42 @@ class ShowListController extends Controller
 
     public function createList(Request $request)
     {
+        \Log::info('Create list request received', ['user_id' => Auth::id(), 'request_data' => $request->all()]);
+        
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string'
+            'description' => 'nullable|string',
+            'is_public' => 'nullable|boolean'
         ]);
 
         if ($validator->fails()) {
+            \Log::warning('Validation failed for create list request', ['errors' => $validator->errors()->toArray()]);
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $list = new ShowList();
-        $list->user_id = Auth::id();
-        $list->title = $request->title;
-        $list->description = $request->description;
-        $list->shows = [];
-        $list->save();
-
-        return response()->json([
-            'message' => 'List created successfully',
-            'list' => $list
-        ], 201);
+        try {
+            \Log::info('Creating new list', ['title' => $request->title]);
+            $list = new ShowList();
+            $list->user_id = Auth::id();
+            $list->title = $request->title;
+            $list->description = $request->description;
+            $list->is_public = $request->has('is_public') ? (bool)$request->is_public : false;
+            $list->shows = [];
+            $list->save();
+            
+            \Log::info('List created successfully', ['list_id' => $list->id]);
+            return response()->json([
+                'message' => 'List created successfully',
+                'list' => $list
+            ], 201);
+        } catch (\Exception $e) {
+            \Log::error('Error creating list: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Failed to create list'], 500);
+        }
     }
 
     public function addShowToList(Request $request, $listId)
@@ -65,10 +81,10 @@ class ShowListController extends Controller
 
         $shows = $list->shows ?? [];
         
-        // Check if show already exists in list
+        // Check if show already exists in list (validating both tmdb_id and type)
         $exists = false;
         foreach ($shows as $show) {
-            if ($show['tmdb_id'] === $request->tmdb_id) {
+            if ($show['tmdb_id'] === $request->tmdb_id && $show['type'] === $request->type) {
                 $exists = true;
                 break;
             }
@@ -91,8 +107,33 @@ class ShowListController extends Controller
 
     public function getUserLists()
     {
-        $lists = ShowList::where('user_id', Auth::id())->get();
-        return response()->json(['lists' => $lists], 200);
+        $startTime = microtime(true);
+        
+        \Log::info('Fetching user lists - User ID: ' . Auth::id());
+        try {
+            $lists = ShowList::where('user_id', Auth::id())->get();
+            $endTime = microtime(true);
+            $executionTime = ($endTime - $startTime) * 1000; // Convert to milliseconds
+            
+            \Log::info('Successfully retrieved user lists', [
+                'count' => count($lists),
+                'execution_time_ms' => $executionTime,
+                'user_id' => Auth::id()
+            ]);
+            
+            return response()->json(['lists' => $lists], 200);
+        } catch (\Exception $e) {
+            $endTime = microtime(true);
+            $executionTime = ($endTime - $startTime) * 1000;
+            
+            \Log::error('Error fetching user lists: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'execution_time_ms' => $executionTime
+            ]);
+            return response()->json(['error' => 'Failed to fetch lists'], 500);
+        }
     }
 
     public function getList($listId)
@@ -117,8 +158,16 @@ class ShowListController extends Controller
         if (!$list) {
             return response()->json(['error' => 'List not found'], 404);
         }
-
-        $shows = array_filter($list->shows ?? [], function($show) use ($tmdbId) {
+        
+        // Get the show type from request query parameters
+        $showType = $request->query('type');
+        
+        $shows = array_filter($list->shows ?? [], function($show) use ($tmdbId, $showType) {
+            // If type is provided, filter by both tmdb_id and type
+            if ($showType) {
+                return !($show['tmdb_id'] === $tmdbId && $show['type'] === $showType);
+            }
+            // Otherwise, just filter by tmdb_id for backward compatibility
             return $show['tmdb_id'] !== $tmdbId;
         });
 
@@ -141,5 +190,33 @@ class ShowListController extends Controller
         $list->delete();
 
         return response()->json(['message' => 'List deleted successfully'], 200);
+    }
+    
+    public function getPublicLists()
+    {
+        $lists = ShowList::where('is_public', true)
+                ->with('user:id,name')
+                ->get();
+                
+        return response()->json(['lists' => $lists], 200);
+    }
+    
+    public function togglePublicStatus(Request $request, $listId)
+    {
+        $list = ShowList::where('id', $listId)
+                ->where('user_id', Auth::id())
+                ->first();
+
+        if (!$list) {
+            return response()->json(['error' => 'List not found'], 404);
+        }
+        
+        $list->is_public = !$list->is_public;
+        $list->save();
+        
+        return response()->json([
+            'message' => $list->is_public ? 'List is now public' : 'List is now private',
+            'list' => $list
+        ], 200);
     }
 }
