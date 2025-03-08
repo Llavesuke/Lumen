@@ -174,7 +174,7 @@ export default {
 }
 
 .section-title span {
-  color: #9c6cff;
+  color: var(--primary-color);
 }
 
 .features__grid {
@@ -223,14 +223,15 @@ export default {
 }
 
 .feature-card__back {
-  background: linear-gradient(135deg, #9c6cff 0%, #5e17eb 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 104, 0.3) 0%, rgba(255, 255, 104, 0.6) 100%);
   transform: rotateY(180deg);
+  color: #111;
 }
 
 .feature-card__front i {
   font-size: 4rem;
   margin-bottom: 1.5rem;
-  color: #9c6cff;
+  color: var(--primary-color);
 }
 
 .feature-card__title {
@@ -259,9 +260,9 @@ export default {
 .features__stat-number {
   font-size: 3rem;
   font-weight: 700;
-  color: #9c6cff;
+  color: var(--primary-color);
   margin-bottom: 0.5rem;
-  text-shadow: 0 0 10px rgba(156, 108, 255, 0.5);
+  text-shadow: 0 0 10px rgba(255, 255, 104, 0.5);
 }
 
 .features__stat-label {

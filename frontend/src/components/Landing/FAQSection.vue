@@ -73,6 +73,16 @@ export default {
         </div>
       </div>
       
+      <!-- Controls for FAQ -->
+      <div class="faq-controls">
+        <button class="faq-control-btn" data-control="prev" aria-label="Pregunta anterior" @click="prevCard">
+          <i class="fas fa-chevron-left" aria-hidden="true"></i>
+        </button>
+        <button class="faq-control-btn" data-control="next" aria-label="Siguiente pregunta" @click="nextCard">
+          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
+      
       <!-- Navigation dots for FAQ -->
       <div class="faq-navigation">
         <button 
@@ -84,16 +94,6 @@ export default {
           :aria-label="'Ver pregunta ' + (index + 1)"
           @click="setActiveCard(index)"
         ></button>
-      </div>
-      
-      <!-- Controls for FAQ -->
-      <div class="faq-controls">
-        <button class="faq-control-btn" data-control="prev" aria-label="Pregunta anterior" @click="prevCard">
-          <i class="fas fa-chevron-left" aria-hidden="true"></i>
-        </button>
-        <button class="faq-control-btn" data-control="next" aria-label="Siguiente pregunta" @click="nextCard">
-          <i class="fas fa-chevron-right" aria-hidden="true"></i>
-        </button>
       </div>
       
       <div class="download-app">
@@ -137,7 +137,7 @@ export default {
 }
 
 .section-title span {
-  color: #9c6cff;
+  color: var(--primary-color);
 }
 
 .faq-container {
@@ -193,11 +193,11 @@ export default {
 
 .faq-card-visual {
   width: 30%;
-  background: linear-gradient(135deg, #9c6cff 0%, #5e17eb 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 104, 0.75), rgba(255, 255, 104, 0.45));
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--primary-color);
   border-top-left-radius: 15px;
   border-bottom-left-radius: 15px;
 }
@@ -231,6 +231,8 @@ export default {
   display: flex;
   gap: 0.8rem;
   margin: 1rem 0 2rem;
+  position: relative;
+  z-index: 10;
 }
 
 .faq-nav-btn {
@@ -239,18 +241,22 @@ export default {
   border-radius: 50%;
   background-color: rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
 }
 
 .faq-nav-btn.active {
-  background-color: #9c6cff;
+  background-color: var(--primary-color);
   transform: scale(1.3);
-  box-shadow: 0 0 10px rgba(156, 108, 255, 0.5);
+  box-shadow: 0 0 10px rgba(255, 255, 104, 0.5);
 }
 
 .faq-controls {
   display: flex;
   gap: 1rem;
   margin-top: 1.5rem;
+  position: relative;
+  z-index: 10;
 }
 
 .faq-control-btn {
@@ -263,12 +269,15 @@ export default {
   background: rgba(255, 255, 255, 0.1);
   color: white;
   transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
 }
 
 .faq-control-btn:hover {
-  background-color: #9c6cff;
+  background-color: var(--primary-color);
   transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(156, 108, 255, 0.5);
+  box-shadow: 0 0 15px rgba(255, 255, 104, 0.5);
+  color: var(--background);
 }
 
 .download-app {
@@ -279,6 +288,7 @@ export default {
 .download-app h3 {
   font-size: 1.8rem;
   margin-bottom: 1.5rem;
+  color: var(--primary-color);
 }
 
 .app-buttons {
@@ -304,9 +314,10 @@ export default {
 }
 
 .app-btn:hover {
-  background: rgba(156, 108, 255, 0.8);
+  background: rgba(255, 255, 104, 0.2);
   transform: translateY(-3px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  color: var(--primary-color);
 }
 
 @media (max-width: 768px) {
@@ -338,6 +349,48 @@ export default {
   .app-buttons {
     flex-direction: column;
     align-items: center;
+  }
+  
+  /* Ajustes para evitar superposición en móviles */
+  .faq-card-stack {
+    height: 350px; /* Aumentamos la altura */
+    margin-bottom: 6rem; /* Margen inferior mayor */
+  }
+  
+  .faq-controls {
+    margin-bottom: 0.5rem;
+  }
+  
+  .faq-navigation {
+    margin: 0 0 1rem;
+    position: relative;
+    z-index: 15; /* Mayor z-index */
+  }
+}
+
+@media (max-width: 480px) {
+  .faq-card-stack {
+    height: 400px; /* Aún más alto para pantallas pequeñas */
+  }
+  
+  .faq-card-content {
+    padding: 1rem;
+  }
+  
+  .faq-card-content h3 {
+    font-size: 1.3rem;
+  }
+  
+  .faq-answer {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  
+  /* Soluciona problema de solapamiento */
+  .faq-controls,
+  .faq-navigation {
+    position: relative;
+    z-index: 20;
   }
 }
 </style>

@@ -40,35 +40,35 @@ export default {
       </div>
       <p class="hero__description">Disfruta de miles de películas y series en tu dispositivo favorito sin restricciones, con la mejor calidad y totalmente gratis.</p>
       <div class="hero__cta">
-        <button class="button button--login" type="button">
+        <router-link to="/login" class="button button--login" type="button">
           <i class="fas fa-user" aria-hidden="true"></i> Iniciar sesión
-        </button>
-        <button class="button button--primary" type="button">
+        </router-link>
+        <router-link to="/register" class="button button--primary" type="button">
           <i class="fas fa-play" aria-hidden="true"></i> Ver ahora
           <span class="button__glow" aria-hidden="true"></span>
-        </button>
+        </router-link>
       </div>
     </div>
     
     <div class="cinema-showcase" aria-label="Carrusel de películas destacadas">
-      <div class="cinema-showcase__reel">
-        <figure class="cinema-showcase__item">
-          <img src="/assets/place1.jpg" alt="Película destacada 1" class="cinema-showcase__image" loading="lazy" width="230" height="345">
+      <div class="cinema-reel">
+        <figure class="cinema-item" style="transform: rotateY(0deg) translateZ(350px)">
+          <img src="/assets/place1.jpg" alt="Película destacada 1" class="cinema-showcase__image" loading="lazy">
         </figure>
-        <figure class="cinema-showcase__item">
-          <img src="/assets/place2.jpeg" alt="Película destacada 2" class="cinema-showcase__image" loading="lazy" width="230" height="345">
+        <figure class="cinema-item" style="transform: rotateY(60deg) translateZ(350px)">
+          <img src="/assets/place2.jpeg" alt="Película destacada 2" class="cinema-showcase__image" loading="lazy">
         </figure>
-        <figure class="cinema-showcase__item">
-          <img src="/assets/place3.webp" alt="Película destacada 3" class="cinema-showcase__image" loading="lazy" width="230" height="345">
+        <figure class="cinema-item" style="transform: rotateY(120deg) translateZ(350px)">
+          <img src="/assets/place3.webp" alt="Película destacada 3" class="cinema-showcase__image" loading="lazy">
         </figure>
-        <figure class="cinema-showcase__item">
-          <img src="/assets/place4.jpg" alt="Película destacada 4" class="cinema-showcase__image" loading="lazy" width="230" height="345">
+        <figure class="cinema-item" style="transform: rotateY(180deg) translateZ(350px)">
+          <img src="/assets/place4.jpg" alt="Película destacada 4" class="cinema-showcase__image" loading="lazy">
         </figure>
-        <figure class="cinema-showcase__item">
-          <img src="/assets/place5.jpg" alt="Película destacada 5" class="cinema-showcase__image" loading="lazy" width="230" height="345">
+        <figure class="cinema-item" style="transform: rotateY(240deg) translateZ(350px)">
+          <img src="/assets/place5.jpg" alt="Película destacada 5" class="cinema-showcase__image" loading="lazy">
         </figure>
-        <figure class="cinema-showcase__item">
-          <img src="/assets/place6.jpg" alt="Película destacada 6" class="cinema-showcase__image" loading="lazy" width="230" height="345">
+        <figure class="cinema-item" style="transform: rotateY(300deg) translateZ(350px)">
+          <img src="/assets/place6.jpg" alt="Película destacada 6" class="cinema-showcase__image" loading="lazy">
         </figure>
       </div>
     </div>
@@ -124,6 +124,9 @@ export default {
   z-index: 10;
   position: relative;
   animation: fadeIn 1s ease-out forwards;
+  background-color: transparent;
+  padding: 2rem;
+  border-radius: 20px;
 }
 
 .hero__logo {
@@ -144,7 +147,7 @@ export default {
 }
 
 .hero__title-highlight {
-  color: #9c6cff;
+  color: #ffff68;
   position: relative;
   display: inline-block;
 }
@@ -156,7 +159,7 @@ export default {
   bottom: 5px;
   width: 100%;
   height: 4px;
-  background: linear-gradient(90deg, rgba(156, 108, 255, 0), rgba(156, 108, 255, 1), rgba(156, 108, 255, 0));
+  background: linear-gradient(90deg, rgba(255, 255, 104, 0), rgba(255, 255, 104, 1), rgba(255, 255, 104, 0));
 }
 
 .hero__dynamic-text {
@@ -164,7 +167,7 @@ export default {
   font-weight: 300;
   height: 2.5rem;
   margin-bottom: 1.5rem;
-  color: #9c6cff;
+  color: #ffff68;
   overflow: hidden;
   position: relative;
 }
@@ -225,15 +228,17 @@ export default {
 }
 
 .button--primary {
-  background: linear-gradient(90deg, #9c6cff, #5e17eb);
-  color: white;
+  background: linear-gradient(90deg, #ffff68, #e8a617);
+  color: #0a0a0a;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 6px 20px rgba(255, 255, 104, 0.4);
+  font-weight: 600;
 }
 
 .button--primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(94, 23, 235, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(255, 255, 104, 0.6);
 }
 
 .button__glow {
@@ -259,49 +264,53 @@ export default {
   }
 }
 
+/* Cinema Showcase - Orbital 3D - Como fondo desenfocado */
 .cinema-showcase {
   position: absolute;
-  bottom: -100px;
   width: 100%;
-  overflow: hidden;
-  z-index: 2;
-}
-
-.cinema-showcase__reel {
+  height: 100%;
   display: flex;
-  gap: 1rem;
-  animation: scrollReel 50s linear infinite;
-  width: calc(230px * 12 + 1rem * 12);
+  align-items: center;
+  justify-content: center;
+  perspective: 1000px;
+  z-index: 2;
+  filter: blur(3px);
+  opacity: 0.6;
 }
 
-.cinema-showcase__item {
-  flex: 0 0 auto;
+.cinema-reel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: rotate3D 30s linear infinite;
+}
+
+.cinema-item {
+  position: absolute;
   width: 230px;
   height: 345px;
-  border-radius: 10px;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+  margin-left: -115px;
+  margin-top: -172.5px;
+  transition: all 0.5s ease;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  transition: all 0.3s ease;
-}
-
-.cinema-showcase__item:hover {
-  transform: translateY(-10px) scale(1.03);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  border-radius: 20px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
 }
 
 .cinema-showcase__image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.5s ease;
 }
 
-@keyframes scrollReel {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(calc(-230px * 6 - 1rem * 6));
-  }
+@keyframes rotate3D {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
 }
 
 .scroll-indicator {
@@ -342,6 +351,7 @@ export default {
   }
 }
 
+/* Media Queries */
 @media (max-width: 768px) {
   .hero__title {
     font-size: 2.5rem;
@@ -357,25 +367,21 @@ export default {
   }
   
   .cinema-showcase {
-    bottom: -50px;
+    opacity: 0.3;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero__content {
+    padding: 1.5rem;
   }
   
-  .cinema-showcase__item {
-    width: 180px;
-    height: 270px;
+  .hero__title {
+    font-size: 2rem;
   }
   
-  .cinema-showcase__reel {
-    width: calc(180px * 12 + 1rem * 12);
-  }
-  
-  @keyframes scrollReel {
-    0% {
-      transform: translateX(0);
-    }
-    100% {
-      transform: translateX(calc(-180px * 6 - 1rem * 6));
-    }
+  .cinema-showcase {
+    opacity: 0.2;
   }
 }
 </style>

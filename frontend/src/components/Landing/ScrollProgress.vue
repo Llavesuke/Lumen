@@ -41,9 +41,9 @@ export default {
 
 .scroll-progress__bar {
   height: 100%;
-  background: linear-gradient(90deg, #9c6cff, #5e17eb);
+  background: linear-gradient(90deg, rgba(255, 255, 104, 0.8), var(--primary-color));
   width: 0%;
   transition: width 0.05s ease-out;
-  box-shadow: 0 0 10px rgba(156, 108, 255, 0.7);
+  box-shadow: 0 0 10px rgba(255, 255, 104, 0.7);
 }
 </style>
