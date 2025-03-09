@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Authentication Handler</title>
+  <script>
+    // This page acts as a bridge for Google OAuth authentication
+    // It helps handle Cross-Origin-Opener-Policy restrictions
+    window.onload = function() {
+      try {
+        // Get the credential from URL hash or query params if available
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const queryParams = new URLSearchParams(window.location.search);
+        
+        // Check for credential in various possible locations
+        const credential = hashParams.get('credential') || 
+                          queryParams.get('credential') || 
+                          hashParams.get('id_token') || 
+                          queryParams.get('id_token');
+        
+        if (credential) {
+          // If we have a credential, pass it to the opener window
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({
+              type: 'google-auth-response',
+              credential: credential
+            }, window.location.origin);
+          }
+        }
+      } catch (error) {
+        console.error('Error in auth handler:', error);
+      } finally {
+        // Close this popup window
+        window.close();
+      }
+    };
+  </script>
+</head>
+<body>
+  <div style="text-align: center; padding: 20px;">
+    <h3>Procesando autenticación...</h3>
+    <p>Esta ventana se cerrará automáticamente.</p>
+  </div>
+</body>
+</html>

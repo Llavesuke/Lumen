@@ -109,6 +109,25 @@ class ShowController extends Controller
     }
 
     /**
+     * Get shows by keyword
+     *
+     * @param Request $request
+     * @param string $keyword
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getShowsByKeyword(Request $request, $keyword)
+    {
+        Log::info('Getting shows by keyword: ' . $keyword);
+        
+        $results = $this->tmdbService->getShowsByKeyword($keyword);
+        
+        return response()->json([
+            'keyword' => $keyword,
+            'results' => $results
+        ], 200);
+    }
+
+    /**
      * Add show to user favorites
      *
      * @param Request $request
@@ -186,6 +205,33 @@ class ShowController extends Controller
         return response()->json([
             'message' => 'Show removed from favorites successfully'
         ], 200);
+    }
+
+    /**
+     * Get popular movies and series
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPopularShows()
+    {
+        $cacheKey = 'popular_shows';
+        
+        return Cache::remember($cacheKey, 3600, function () {
+            // Get popular movies (3 items)
+            $popularMovies = $this->tmdbService->getPopularShows('movie');
+            $popularMovies = array_slice($popularMovies, 0, 3);
+            
+            // Get popular series (3 items)
+            $popularSeries = $this->tmdbService->getPopularShows('tv');
+            $popularSeries = array_slice($popularSeries, 0, 3);
+            
+            // Combine results
+            $results = array_merge($popularMovies, $popularSeries);
+            
+            return response()->json([
+                'results' => $results
+            ], 200);
+        });
     }
 
     /**

@@ -150,7 +150,9 @@ class TMDBService
             $endpoint = $type === 'movie' ? 'movie/popular' : 'tv/popular';
             
             $response = Http::withHeaders($this->headers)
-                ->get("{$this->baseUrl}/{$endpoint}");
+                ->get("{$this->baseUrl}/{$endpoint}", [
+                    'language' => 'es-ES'
+                ]);
             
             if ($response->successful()) {
                 $results = $response->json()['results'] ?? [];
@@ -175,7 +177,8 @@ class TMDBService
         try {
             $response = Http::withHeaders($this->headers)
                 ->get("{$this->baseUrl}/movie/{$tmdbId}", [
-                    'append_to_response' => 'release_dates'
+                    'append_to_response' => 'release_dates',
+                    'language' => 'es-ES'
                 ]);
             
             if ($response->successful()) {
@@ -189,6 +192,7 @@ class TMDBService
                     'age_classification' => $this->extractAgeRating($data),
                     'background_image' => $this->imageBaseUrl . $data['backdrop_path'],
                     'logo_image' => $this->getShowLogo($tmdbId, 'movie'),
+                    'overview' => (isset($data['overview']) && !empty(trim($data['overview']))) ? $data['overview'] : 'No hay una sinopsis disponible',
                     'type' => 'movie'
                 ];
             }
@@ -211,7 +215,8 @@ class TMDBService
         try {
             $response = Http::withHeaders($this->headers)
                 ->get("{$this->baseUrl}/tv/{$tmdbId}", [
-                    'append_to_response' => 'content_ratings'
+                    'append_to_response' => 'content_ratings',
+                    'language' => 'es-ES'
                 ]);
             
             if ($response->successful()) {
@@ -236,6 +241,7 @@ class TMDBService
                     'age_classification' => $this->extractTvContentRating($data),
                     'background_image' => $this->imageBaseUrl . $data['backdrop_path'],
                     'logo_image' => $this->getShowLogo($tmdbId, 'tv'),
+                    'overview' => (isset($data['overview']) && !empty(trim($data['overview']))) ? $data['overview'] : 'No hay una sinopsis disponible',
                     'seasons_count' => count($seasons),
                     'seasons' => $seasons,
                     'type' => 'series'
@@ -260,7 +266,9 @@ class TMDBService
     {
         try {
             $response = Http::withHeaders($this->headers)
-                ->get("{$this->baseUrl}/tv/{$tmdbId}/season/{$seasonNumber}");
+                ->get("{$this->baseUrl}/tv/{$tmdbId}/season/{$seasonNumber}", [
+                    'language' => 'es-ES'
+                ]);
             
             if ($response->successful()) {
                 $data = $response->json();
@@ -302,7 +310,8 @@ class TMDBService
         try {
             $response = Http::withHeaders($this->headers)
                 ->get("{$this->baseUrl}/{$type}/{$tmdbId}/images", [
-                    'include_image_language' => 'en,null',
+                    'include_image_language' => 'es,en,null',
+                    'language' => 'es-ES'
                 ]);
             
             if ($response->successful()) {
@@ -325,10 +334,8 @@ class TMDBService
                     }
                 }
                 
-                // Fallback to poster if no logo found
-                if (!empty($data['posters'][0])) {
-                    return $this->imageBaseUrl . $data['posters'][0]['file_path'];
-                }
+                // No fallback to poster - we want to return null if no logo is found
+                // so the frontend can display the title text instead
             }
             
             return null;
@@ -497,6 +504,84 @@ class TMDBService
         } catch (\Exception $e) {
             Log::error('TMDB API genre list error: ' . $e->getMessage());
             return [];
+        }
+    }
+
+    /**
+     * Get shows by keyword
+     * 
+     * @param string $keyword
+     * @return array
+     */
+    public function getShowsByKeyword($keyword)
+    {
+        try {
+            Log::info("Getting shows by keyword: {$keyword}");
+            
+            // Get movies by keyword
+            $movieResponse = Http::withHeaders($this->headers)
+                ->get("{$this->baseUrl}/discover/movie", [
+                    'with_keywords' => $this->getKeywordId($keyword),
+                    'sort_by' => 'popularity.desc',
+                    'language' => 'es-ES',
+                    'page' => 1
+                ]);
+            
+            // Get TV shows by keyword
+            $tvResponse = Http::withHeaders($this->headers)
+                ->get("{$this->baseUrl}/discover/tv", [
+                    'with_keywords' => $this->getKeywordId($keyword),
+                    'sort_by' => 'popularity.desc',
+                    'language' => 'es-ES',
+                    'page' => 1
+                ]);
+            
+            $results = [];
+            
+            if ($movieResponse->successful()) {
+                $movieResults = $movieResponse->json()['results'] ?? [];
+                $results = array_merge($results, $this->formatSearchResults($movieResults, 'movie'));
+            }
+            
+            if ($tvResponse->successful()) {
+                $tvResults = $tvResponse->json()['results'] ?? [];
+                $results = array_merge($results, $this->formatSearchResults($tvResults, 'tv'));
+            }
+            
+            return $results;
+            
+        } catch (\Exception $e) {
+            Log::error('TMDB API keyword search error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get keyword ID from TMDB API
+     * 
+     * @param string $keyword
+     * @return int|null
+     */
+    private function getKeywordId($keyword)
+    {
+        try {
+            $response = Http::withHeaders($this->headers)
+                ->get("{$this->baseUrl}/search/keyword", [
+                    'query' => $keyword,
+                    'page' => 1
+                ]);
+            
+            if ($response->successful()) {
+                $results = $response->json()['results'] ?? [];
+                if (!empty($results)) {
+                    return $results[0]['id'];
+                }
+            }
+            
+            return null;
+        } catch (\Exception $e) {
+            Log::error('TMDB API keyword ID search error: ' . $e->getMessage());
+            return null;
         }
     }
 }

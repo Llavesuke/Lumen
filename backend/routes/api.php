@@ -27,6 +27,8 @@ Route::prefix('v1')->group(function () {
     // Public show endpoints
     Route::get('/shows/search', [ShowController::class, 'searchShows']);
     Route::get('/shows/genre/{genre}', [ShowController::class, 'getShowsByGenre']);
+    Route::get('/shows/keyword/{keyword}', [ShowController::class, 'getShowsByKeyword']);
+    Route::get('/shows/popular', [ShowController::class, 'getPopularShows']);
     Route::get('/movies/{tmdbId}', [ShowController::class, 'getMovieDetails']);
     Route::get('/series/{tmdbId}', [ShowController::class, 'getSeriesDetails']);
 

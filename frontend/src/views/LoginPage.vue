@@ -1,12 +1,12 @@
 <script>
-import { FormInput, FormButton, FormDivider } from '../components/forms';
+import { FormInput, FormButton } from '../components/forms';
+import { useAuthStore } from '../stores/auth';
 
 export default {
   name: 'LoginPage',
   components: {
     FormInput,
-    FormButton,
-    FormDivider
+    FormButton
   },
   data() {
     return {
@@ -22,6 +22,13 @@ export default {
       isLoading: false,
       rememberMe: false
     }
+  },
+  setup() {
+    const authStore = useAuthStore();
+    
+    return { 
+      authStore
+    };
   },
   methods: {
     async handleSubmit() {
@@ -42,15 +49,28 @@ export default {
       if (!this.errors.email && !this.errors.password) {
         this.isLoading = true;
         try {
-          // Simulated API call - Replace with actual implementation
-          // await login(this.form.email, this.form.password)
-          console.log('Login attempt:', this.form);
+          // Call the login method from the auth store
+          const success = await this.authStore.login({
+            email: this.form.email,
+            password: this.form.password
+          });
           
-          // If successful, redirect to dashboard or home
-          setTimeout(() => {
-            this.$router.push('/dashboard');
-          }, 1000);
-          
+          if (success) {
+            // If successful, redirect to movies page
+            this.$router.push('/movies');
+          } else {
+            // If login failed, get errors from the store
+            const storeErrors = this.authStore.getErrors;
+            if (storeErrors.email) {
+              this.errors.email = storeErrors.email[0];
+            }
+            if (storeErrors.password) {
+              this.errors.password = storeErrors.password[0];
+            }
+            if (storeErrors.general) {
+              this.errors.general = storeErrors.general[0];
+            }
+          }
         } catch (error) {
           // Handle login error
           this.errors.general = error.message || 'Correo o contraseña inválidos';
@@ -58,7 +78,7 @@ export default {
           this.isLoading = false;
         }
       } else {
-        this.errors.general = 'Correo o contraseña inválidos';
+        this.errors.general = 'Por favor, completa todos los campos correctamente';
       }
     },
     clearErrors() {
@@ -72,10 +92,7 @@ export default {
       const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       return re.test(email);
     },
-    loginWithGoogle() {
-      // Implement Google login
-      console.log('Login with Google');
-    },
+
     toggleRememberMe() {
       this.rememberMe = !this.rememberMe;
     }
@@ -144,18 +161,7 @@ export default {
             icon="right-to-bracket"
           />
           
-          <FormDivider text="o continúa con" />
-          
-          <div class="social-login-buttons">
-            <button 
-              type="button" 
-              class="social-login-button google-button"
-              @click="loginWithGoogle"
-            >
-              <i class="fab fa-google" aria-hidden="true"></i>
-              <span>Google</span>
-            </button>
-          </div>
+
         </form>
         
         <div class="auth-footer">
@@ -204,11 +210,13 @@ export default {
   -webkit-backdrop-filter: blur(15px);
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 2.5rem;
+  padding: 2rem;
   width: 100%;
   max-width: 450px;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
   animation: fadeIn 0.5s ease-out forwards;
+  max-height: 95vh;
+  overflow-y: auto;
 }
 
 .auth-header {
@@ -285,32 +293,7 @@ export default {
   color: #ff6b6b;
 }
 
-.social-login-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-}
 
-.social-login-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.7rem;
-  padding: 0.8rem 1.5rem;
-  border-radius: 50px;
-  font-weight: 500;
-  font-size: 0.95rem;
-  transition: all 0.3s ease;
-  border: none;
-  cursor: pointer;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  width: 100%;
-}
-
-.google-button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
 
 .auth-footer {
   text-align: center;
@@ -408,21 +391,75 @@ export default {
 
 @media (max-width: 480px) {
   .auth-panel {
-    padding: 2rem 1.5rem;
+    padding: 1.5rem 1rem;
+    margin: 0.5rem;
+    max-height: 85vh; /* Reduced height on mobile for better visibility */
   }
   
   .auth-title {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .auth-subtitle {
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+  
+  .auth-logo-img {
+    height: 35px;
+  }
+
+  .auth-logo {
+    margin: 0 auto 1rem;
+  }
+
+  .auth-header {
+    margin-bottom: 1.2rem;
   }
   
   .form-options {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
+    margin-bottom: 1.2rem;
+    font-size: 0.8rem;
   }
   
   .forgot-password-link {
     align-self: flex-end;
+  }
+  
+  .social-login-buttons {
+    margin-top: 1rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .social-login-button {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+  
+  .auth-footer {
+    font-size: 0.85rem;
+    margin-top: 1.2rem;
+    padding: 0.5rem 0;
+  }
+
+  .form-error-message {
+    padding: 0.75rem;
+    margin-bottom: 1.2rem;
+    font-size: 0.85rem;
+  }
+  
+  /* Añadir más espacio entre los campos del formulario */
+  .auth-form > div {
+    margin-bottom: 1.2rem;
+  }
+  
+  /* Mejorar espaciado vertical general */
+  * + * {
+    margin-top: 0.5rem;
   }
 }
 </style>

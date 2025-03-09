@@ -1,12 +1,12 @@
 <script>
-import { FormInput, FormButton, FormDivider } from '../components/forms';
+import { FormInput, FormButton } from '../components/forms';
+import { useAuthStore } from '../stores/auth';
 
 export default {
   name: 'RegisterPage',
   components: {
     FormInput,
-    FormButton,
-    FormDivider
+    FormButton
   },
   data() {
     return {
@@ -26,6 +26,13 @@ export default {
       isLoading: false,
       termsAccepted: false
     }
+  },
+  setup() {
+    const authStore = useAuthStore();
+    
+    return { 
+      authStore
+    };
   },
   methods: {
     async handleSubmit() {
@@ -65,14 +72,33 @@ export default {
       ) {
         this.isLoading = true;
         try {
-          // Aquí se implementaría la llamada a la API para registrar al usuario
-          console.log('Registro de usuario:', this.form);
+          // Llamar al método de registro del store de autenticación
+          const success = await this.authStore.register({
+            name: this.form.name,
+            email: this.form.email,
+            password: this.form.password,
+            password_confirmation: this.form.password_confirmation
+          });
           
-          // Simular registro exitoso y redirección
-          setTimeout(() => {
-            this.$router.push('/login');
-          }, 1000);
-          
+          if (success) {
+            // Si el registro es exitoso, redirigir a la página de películas
+            this.$router.push('/movies');
+          } else {
+            // Si el registro falló, obtener errores del store
+            const storeErrors = this.authStore.getErrors;
+            if (storeErrors.name) {
+              this.errors.name = storeErrors.name[0];
+            }
+            if (storeErrors.email) {
+              this.errors.email = storeErrors.email[0];
+            }
+            if (storeErrors.password) {
+              this.errors.password = storeErrors.password[0];
+            }
+            if (storeErrors.general) {
+              this.errors.general = storeErrors.general[0];
+            }
+          }
         } catch (error) {
           this.errors.general = error.message || 'Error al registrar el usuario';
         } finally {
@@ -93,10 +119,7 @@ export default {
       const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       return re.test(email);
     },
-    registerWithGoogle() {
-      // Implementar registro con Google
-      console.log('Registro con Google');
-    },
+
     toggleTerms() {
       this.termsAccepted = !this.termsAccepted;
     }
@@ -186,18 +209,7 @@ export default {
             icon="user-plus"
           />
           
-          <FormDivider text="o regístrate con" />
-          
-          <div class="social-login-buttons">
-            <button 
-              type="button" 
-              class="social-login-button google-button"
-              @click="registerWithGoogle"
-            >
-              <i class="fab fa-google" aria-hidden="true"></i>
-              <span>Google</span>
-            </button>
-          </div>
+
         </form>
         
         <div class="auth-footer">
@@ -246,32 +258,36 @@ export default {
   -webkit-backdrop-filter: blur(15px);
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 2.5rem;
+  padding: 1.5rem;
   width: 100%;
   max-width: 480px;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
   animation: fadeIn 0.5s ease-out forwards;
+  max-height: 90vh; /* Slightly reduced to ensure it fits better on smaller screens */
+  overflow-y: auto;
+  scrollbar-width: thin; /* For Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent; /* For Firefox */
 }
 
 .auth-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .auth-logo {
   display: block;
-  margin: 0 auto 1.5rem;
+  margin: 0 auto 1rem;
 }
 
 .auth-logo-img {
-  height: 60px;
+  height: 40px;
   filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
 }
 
 .auth-title {
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3rem;
   color: white;
 }
 
@@ -281,15 +297,15 @@ export default {
 }
 
 .auth-form {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .form-options {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
 }
 
 .terms-checkbox {
@@ -321,46 +337,7 @@ export default {
   text-decoration: underline;
 }
 
-.social-login-buttons {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
 
-.social-login-button {
-  flex: 1;
-  padding: 0.75rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.social-login-button i {
-  margin-right: 0.5rem;
-  font-size: 1.1rem;
-}
-
-.social-login-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
-}
-
-.google-button {
-  background: rgba(219, 68, 55, 0.1);
-  border: 1px solid rgba(219, 68, 55, 0.2);
-}
-
-.google-button:hover {
-  background: rgba(219, 68, 55, 0.2);
-}
 
 .form-error-message {
   background: rgba(255, 87, 87, 0.1);
@@ -460,13 +437,88 @@ export default {
 }
 
 /* Responsive adjustments */
+/* Style scrollbars for webkit browsers */
+.auth-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.auth-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.auth-panel::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
 @media (max-width: 576px) {
   .auth-panel {
-    padding: 2rem 1.5rem;
+    padding: 1.5rem 1rem;
+    margin: 0.5rem;
+    max-height: 85vh; /* Reduced height on mobile for better visibility */
   }
   
   .auth-title {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .auth-container {
+    padding: 1rem;
+  }
+  
+  .auth-subtitle {
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .auth-logo-img {
+    height: 35px;
+  }
+
+  .auth-logo {
+    margin: 0 auto 1rem;
+  }
+
+  .auth-header {
+    margin-bottom: 1.2rem;
+  }
+
+  .form-options {
+    margin-bottom: 1.2rem;
+    font-size: 0.8rem;
+  }
+
+  .social-login-buttons {
+    margin-top: 1rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .social-login-button {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .auth-footer {
+    font-size: 0.85rem;
+    margin-top: 1.2rem;
+    padding: 0.5rem 0;
+  }
+
+  .form-error-message {
+    padding: 0.75rem;
+    margin-bottom: 1.2rem;
+    font-size: 0.85rem;
+  }
+  
+  /* Añadir más espacio entre los campos del formulario */
+  .auth-form > div {
+    margin-bottom: 1.2rem;
+  }
+  
+  /* Mejorar espaciado vertical general */
+  * + * {
+    margin-top: 0.5rem;
   }
 }
 </style>

@@ -32,10 +32,11 @@ export default {
 
 <style scoped>
 .footer {
-  background: linear-gradient(to bottom, rgba(17, 17, 28, 0.8), rgba(9, 9, 12, 1));
+  background-color: var(--background);
   padding: 3rem 0 1.5rem;
   position: relative;
   z-index: 10;
+  margin-top: 0;
 }
 
 .footer__content {
