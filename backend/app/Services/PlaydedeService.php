@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use DOMDocument;
 use DOMXPath;
 
@@ -14,6 +15,10 @@ class PlaydedeService
     protected $headers;
     protected $puppeteerUrl;
     protected $requestTimeout = 20; // Timeout para requests HTTP
+    protected $domainCacheDuration = 3600; // 1 hora en segundos
+    protected $domainCacheKey = 'playdede_current_domain';
+    protected $entrarPlaydedeUrl = 'https://entrarplaydede.com/';
+    protected $fallbackDomain = 'https://www6.playdede.link';
 
     public function __construct()
     {
@@ -31,41 +36,122 @@ class PlaydedeService
     }
 
     /**
-     * Get current Playdede domain from entrarplaydede.com
+     * Get current Playdede domain from entrarplaydede.com with caching
+     * Checks for domain updates every hour
      */
     protected function getCurrentDomain()
     {
+        // Intento obtener el dominio actual desde la caché
+        $cachedDomain = Cache::get($this->domainCacheKey);
+        
+        // Si tenemos un dominio en caché y todavía es válido, lo usamos
+        if ($cachedDomain) {
+            Log::info('Using cached Playdede domain: ' . $cachedDomain);
+            return $cachedDomain;
+        }
+        
+        // Si no hay dominio en caché o ha expirado, obtenemos uno nuevo
+        Log::info('Cached domain expired or not found. Fetching current Playdede domain...');
         try {
-            Log::info('Checking current Playdede domain...');
-            $response = Http::timeout($this->requestTimeout)->get('https://entrarplaydede.com/');
+            $response = Http::timeout($this->requestTimeout)->get($this->entrarPlaydedeUrl);
             
             if ($response->successful()) {
                 Log::info('Successfully connected to entrarplaydede.com');
                 $dom = new DOMDocument();
                 @$dom->loadHTML($response->body());
                 $xpath = new DOMXPath($dom);
-                $h1Link = $xpath->query('//h1/a')->item(0);
                 
-                if ($h1Link) {
-                    $currentDomain = $h1Link->textContent;
+                // Estructura corregida: body > article > h1 > b > a
+                // Intentamos diferentes selectores XPath para mayor robustez
+                $linkSelectors = [
+                    '//article//h1/b/a',  // Selector específico según estructura mencionada
+                    '//h1//a',            // Más general, busca cualquier a dentro de h1
+                    '//article//a',       // Más general aún, cualquier a dentro de article
+                    '//a[contains(text(), "playdede")]' // Búsqueda por texto en el enlace
+                ];
+                
+                $currentDomain = null;
+                foreach ($linkSelectors as $selector) {
+                    $linkNode = $xpath->query($selector)->item(0);
+                    if ($linkNode) {
+                        $currentDomain = trim($linkNode->textContent);
+                        Log::info("Found domain using selector '{$selector}': " . $currentDomain);
+                        break;
+                    }
+                }
+                
+                if ($currentDomain) {
                     Log::info('Current domain from entrarplaydede.com: ' . $currentDomain);
                     
-                    if ($currentDomain === 'www6.playdede.link') {
-                        return 'https://www6.playdede.link';
+                    // Verificar que el dominio obtenido parece válido
+                    if (!empty($currentDomain) && strpos($currentDomain, '.') !== false) {
+                        // Asegurarse de que no tiene http:// o https:// al principio
+                        if (strpos($currentDomain, 'http://') === 0) {
+                            $currentDomain = substr($currentDomain, 7);
+                        } elseif (strpos($currentDomain, 'https://') === 0) {
+                            $currentDomain = substr($currentDomain, 8);
+                        }
+                        
+                        $domainUrl = 'https://' . $currentDomain;
+                        
+                        // Intentar verificar que el dominio está activo
+                        try {
+                            $domainCheck = Http::timeout(5)
+                                ->withOptions(['verify' => false])
+                                ->get($domainUrl);
+                                
+                            if ($domainCheck->successful()) {
+                                Log::info('Domain verification successful for: ' . $domainUrl);
+                                
+                                // Guardamos el dominio en caché
+                                Cache::put($this->domainCacheKey, $domainUrl, $this->domainCacheDuration);
+                                
+                                // Si el dominio ha cambiado respecto al fallback, log más detallado
+                                if ($domainUrl !== $this->fallbackDomain) {
+                                    Log::warning('Playdede domain has changed! New domain: ' . $domainUrl . ', Old fallback: ' . $this->fallbackDomain);
+                                }
+                                
+                                return $domainUrl;
+                            } else {
+                                Log::warning('Domain verification failed for: ' . $domainUrl . '. Status: ' . $domainCheck->status());
+                                Log::debug('Response body: ' . substr($domainCheck->body(), 0, 500) . '...');
+                            }
+                        } catch (\Exception $e) {
+                            Log::warning('Error verifying domain: ' . $domainUrl . '. Error: ' . $e->getMessage());
+                        }
+                    } else {
+                        Log::warning('Retrieved domain does not appear to be valid: ' . $currentDomain);
                     }
-                    
-                    Log::warning('Playdede domain has changed. Current domain: ' . $currentDomain);
-                    return 'https://' . $currentDomain;
+                } else {
+                    // Si no se pudo encontrar el dominio, guardar el HTML para debuggear
+                    Log::warning('Could not find domain in entrarplaydede.com HTML');
+                    Log::debug('HTML snippet: ' . substr($response->body(), 0, 1000) . '...');
                 }
             } else {
                 Log::error('Failed to connect to entrarplaydede.com. Status: ' . $response->status());
+                Log::debug('Response body: ' . substr($response->body(), 0, 500) . '...');
             }
         } catch (\Exception $e) {
             Log::error('Error getting current Playdede domain: ' . $e->getMessage());
         }
         
-        Log::info('Using default domain: https://www6.playdede.link');
-        return 'https://www6.playdede.link';
+        // Si hay algún problema, usamos el dominio de fallback pero lo cacheamos por menos tiempo (30 minutos)
+        Log::warning('Using fallback domain: ' . $this->fallbackDomain . ' (will retry in 30 minutes)');
+        Cache::put($this->domainCacheKey, $this->fallbackDomain, 1800); // 30 minutos
+        
+        return $this->fallbackDomain;
+    }
+
+    /**
+     * Fuerza una actualización del dominio actual, ignorando la caché
+     */
+    public function forceUpdateDomain()
+    {
+        Log::info('Forcing update of Playdede domain...');
+        Cache::forget($this->domainCacheKey);
+        $newDomain = $this->getCurrentDomain();
+        $this->baseUrl = $newDomain;
+        return $newDomain;
     }
 
     /**
@@ -74,6 +160,15 @@ class PlaydedeService
     public function getShowSources($title, $tmdbId, $type = 'movie', $season = null, $episode = null)
     {
         try {
+            // Actualizar dominio si han pasado más de 24 horas desde la última verificación exitosa
+            $lastSuccessfulCheck = Cache::get('playdede_last_successful_check');
+            $currentTime = time();
+            if (!$lastSuccessfulCheck || ($currentTime - $lastSuccessfulCheck) > 86400) {
+                Log::info('More than 24 hours since last successful check. Updating domain...');
+                $this->forceUpdateDomain();
+                Cache::put('playdede_last_successful_check', $currentTime, 86400 * 7); // Almacenar por una semana
+            }
+            
             Log::info("Getting sources for show - Title: {$title}, TMDB ID: {$tmdbId}, Type: {$type}");
             if ($season && $episode) {
                 Log::info("Season: {$season}, Episode: {$episode}");
@@ -87,6 +182,18 @@ class PlaydedeService
             Log::info('Attempting search with URL: ' . $searchUrl);
             $searchResults = $this->performSearch($searchUrl);
             Log::info('First search results count: ' . count($searchResults));
+            
+            // Si la búsqueda falló, podría ser porque el dominio ha cambiado, intentar actualizar
+            if (empty($searchResults)) {
+                Log::warning('No search results. Domain might have changed. Forcing domain update...');
+                $this->baseUrl = $this->forceUpdateDomain();
+                
+                // Intentar de nuevo con el nuevo dominio
+                $searchUrl = "{$this->baseUrl}/search?s=" . urlencode($formattedTitle);
+                Log::info('Retrying search with new domain URL: ' . $searchUrl);
+                $searchResults = $this->performSearch($searchUrl);
+                Log::info('New search results count: ' . count($searchResults));
+            }
             
             // If we found exactly one result, use it
             if (count($searchResults) === 1) {

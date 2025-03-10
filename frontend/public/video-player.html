@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+        #video {
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+        .error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            width: 80%;
+        }
+    </style>
+</head>
+<body>
+    <video id="video" controls autoplay></video>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const videoUrl = urlParams.get('url');
+            const video = document.getElementById('video');
+            
+            if (!videoUrl) {
+                showError('No se proporcionó URL de video');
+                return;
+            }
+            
+            if (Hls.isSupported()) {
+                console.log('Usando HLS.js para reproducir:', videoUrl);
+                const hls = new Hls({
+                    debug: false,
+                    enableWorker: true,
+                    xhrSetup: function(xhr) {
+                        // Configurar CORS para el request
+                        xhr.withCredentials = false;
+                    }
+                });
+                
+                hls.loadSource(videoUrl);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    console.log('Manifest cargado, intentando reproducir');
+                    video.play().catch(e => {
+                        console.error('Error al reproducir:', e);
+                        showError('Error al reproducir el video: ' + e.message);
+                    });
+                });
+                
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    console.error('Error HLS:', data);
+                    if (data.fatal) {
+                        switch(data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log('Error de red, intentando reconectar...');
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log('Error de media, intentando recuperar...');
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                console.log('Error fatal:', data);
+                                showError('Error al cargar el video: ' + data.details);
+                                hls.destroy();
+                                break;
+                        }
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Para navegadores con soporte nativo como Safari en iOS
+                console.log('Usando soporte nativo para HLS');
+                video.src = videoUrl;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play().catch(e => {
+                        console.error('Error al reproducir:', e);
+                        showError('Error al reproducir el video: ' + e.message);
+                    });
+                });
+            } else {
+                showError('Tu navegador no soporta la reproducción de este formato de video');
+            }
+            
+            function showError(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = message;
+                document.body.appendChild(errorDiv);
+            }
+        });
+    </script>
+</body>
+</html>

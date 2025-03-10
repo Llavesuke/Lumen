@@ -1,6 +1,6 @@
 <script>
 import { useAuthStore } from '../../stores/auth';
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useSearch } from '../../composables/useSearch';
 import FooterComponent from './FooterComponent.vue';
@@ -16,6 +16,7 @@ export default {
     const { searchContent, searchQuery } = useSearch();
     const isSearchOpen = ref(false);
     const mobileMenuOpen = ref(false);
+    const profileDropdownOpen = ref(false);
     
     // Search is now always visible, so we just need to clear it
     const clearSearch = () => {
@@ -28,18 +29,57 @@ export default {
     
     const handleSearch = () => {
       if (searchQuery.value.trim()) {
-        router.push({ name: 'search', query: { q: searchQuery.value } });
+        router.push({ name: 'search', query: { q: searchQuery.value } })
+          .catch(err => {
+            // If navigation fails, try using path instead
+            router.push({ path: '/search', query: { q: searchQuery.value } })
+              .catch(error => console.error('Navigation error:', error));
+          });
         isSearchOpen.value = false;
       }
     };
+    
+    const toggleProfileDropdown = () => {
+      profileDropdownOpen.value = !profileDropdownOpen.value;
+    };
+    
+    const closeProfileDropdown = () => {
+      profileDropdownOpen.value = false;
+    };
+    
+    const handleLogout = () => {
+      authStore.logout();
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      router.push('/landing');
+    };
+    
+    const handleClickOutside = (event) => {
+      const dropdown = document.querySelector('.nav__user-dropdown');
+      const userBtn = document.querySelector('.nav__user-btn');
+      if (dropdown && !dropdown.contains(event.target) && !userBtn.contains(event.target)) {
+        closeProfileDropdown();
+      }
+    };
+    
+    onMounted(() => {
+      document.addEventListener('click', handleClickOutside);
+    });
+    
+    onUnmounted(() => {
+      document.removeEventListener('click', handleClickOutside);
+    });
     
     return { 
       authStore, 
       mobileMenuOpen,
       searchQuery,
+      profileDropdownOpen,
       clearSearch, 
       toggleMobileMenu,
-      handleSearch
+      handleSearch,
+      toggleProfileDropdown,
+      handleLogout
     };
   }
 };
@@ -84,10 +124,19 @@ export default {
             </div>
           </div>
           <div class="nav__user">
-            <button class="nav__user-btn">
+            <button class="nav__user-btn" @click.stop="toggleProfileDropdown">
               <i class="fas fa-user-circle"></i>
-              <i class="fas fa-caret-down"></i>
+              <i class="fas fa-caret-down" :class="{ 'fa-rotate-180': profileDropdownOpen }"></i>
             </button>
+            <div class="nav__user-dropdown" v-if="profileDropdownOpen">
+              <router-link to="/profile" class="dropdown-item" @click="closeProfileDropdown">
+                <i class="fas fa-user"></i> Perfil
+              </router-link>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item logout-btn" @click="handleLogout">
+                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -173,6 +222,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  position: relative;
 }
 
 .nav__search {
@@ -236,10 +286,63 @@ export default {
   align-items: center;
   gap: 0.5rem;
   font-size: 1.5rem;
+  position: relative;
 }
 
 .nav__user-btn i:last-child {
   font-size: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.nav__user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: rgba(20, 20, 20, 0.95);
+  border-radius: 4px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+  width: 200px;
+  z-index: 101;
+  overflow: hidden;
+  margin-top: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin: 4px 0;
+}
+
+.logout-btn {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
 }
 
 .main {

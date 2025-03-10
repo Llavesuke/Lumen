@@ -70,21 +70,14 @@ class AuthController extends Controller
 
             // Check if user exists
             $user = User::where('email', $request->email)->first();
-            if (!$user) {
+            
+            // Check if user exists and password is correct
+            // Using a generic error message for security purposes
+            if (!$user || !Hash::check($request->password, $user->password)) {
                 return response()->json([
                     'message' => 'Error de autenticación',
                     'errors' => [
-                        'email' => ['El usuario no está registrado en el sistema.']
-                    ]
-                ], 401);
-            }
-
-            // Check if password is correct
-            if (!Hash::check($request->password, $user->password)) {
-                return response()->json([
-                    'message' => 'Error de autenticación',
-                    'errors' => [
-                        'password' => ['La contraseña ingresada es incorrecta.']
+                        'general' => ['Credenciales incorrectos']
                     ]
                 ], 401);
             }

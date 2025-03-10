@@ -39,29 +39,42 @@ export default {
       // Create portal effect (Doctor Strange style)
       portal = new THREE.Group();
       
-      // Main portal ring
-      const ringGeometry = new THREE.TorusGeometry(2, 0.3, 16, 100);
-      const ringMaterial = new THREE.MeshStandardMaterial({
-        color: 0xF58216, // Orange color like Doctor Strange portals
-        emissive: 0xF58216,
-        emissiveIntensity: 0.6,
-        metalness: 0.7,
-        roughness: 0.3
+      // Making rings almost invisible as per request - particles will form the circular shape
+      // Very subtle main ring with minimal visibility
+      const ringGeometry = new THREE.TorusGeometry(2, 0.05, 24, 120); // Much thinner
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: 0xF58216, 
+        transparent: true,
+        opacity: 0.1, // Almost invisible
+        blending: THREE.AdditiveBlending
       });
       
       const ring = new THREE.Mesh(ringGeometry, ringMaterial);
       portal.add(ring);
       
-      // Secondary ring (outer glow)
-      const outerRingGeometry = new THREE.TorusGeometry(2.2, 0.1, 16, 100);
+      // Very subtle outer glow - barely visible
+      const outerRingGeometry = new THREE.TorusGeometry(2.2, 0.03, 24, 120);
       const outerRingMaterial = new THREE.MeshBasicMaterial({
-        color: 0xFFA500, // Bright orange
+        color: 0xFFA500,
         transparent: true,
-        opacity: 0.6
+        opacity: 0.08,
+        blending: THREE.AdditiveBlending
       });
       
       const outerRing = new THREE.Mesh(outerRingGeometry, outerRingMaterial);
       portal.add(outerRing);
+      
+      // Very subtle inner glow - barely visible
+      const innerRingGeometry = new THREE.TorusGeometry(1.9, 0.02, 24, 120);
+      const innerRingMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFFD700,
+        transparent: true,
+        opacity: 0.08,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const innerRing = new THREE.Mesh(innerRingGeometry, innerRingMaterial);
+      portal.add(innerRing);
       
       // Portal inner
       const innerGeometry = new THREE.CircleGeometry(1.9, 64);
@@ -87,209 +100,219 @@ export default {
       glow.position.z = -0.2;
       portal.add(glow);
       
-      // Create magical runes
-      const createRunes = () => {
-        // Create canvas for rune generation
-        const generateRuneTexture = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = 64;
-          canvas.height = 64;
-          const ctx = canvas.getContext('2d');
-          
-          // Clear canvas
-          ctx.fillStyle = 'rgba(0,0,0,0)';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
-          // Draw rune (simplified magical symbols)
-          ctx.strokeStyle = `rgba(255, ${130 + Math.random() * 125}, 0, 0.8)`;
-          ctx.lineWidth = 2;
-          
-          // Random rune pattern
-          ctx.beginPath();
-          
-          // Different rune patterns
-          const patternType = Math.floor(Math.random() * 5);
-          
-          switch(patternType) {
-            case 0: // Circle with lines
-              ctx.arc(32, 32, 20, 0, Math.PI * 2);
-              ctx.moveTo(12, 32);
-              ctx.lineTo(52, 32);
-              ctx.moveTo(32, 12);
-              ctx.lineTo(32, 52);
-              break;
-            case 1: // Triangle
-              ctx.moveTo(32, 12);
-              ctx.lineTo(52, 52);
-              ctx.lineTo(12, 52);
-              ctx.closePath();
-              break;
-            case 2: // Square with diagonals
-              ctx.rect(12, 12, 40, 40);
-              ctx.moveTo(12, 12);
-              ctx.lineTo(52, 52);
-              ctx.moveTo(52, 12);
-              ctx.lineTo(12, 52);
-              break;
-            case 3: // Spiral
-              for (let i = 0; i < 10; i++) {
-                const radius = 5 + i * 2;
-                const angle = i * Math.PI / 5;
-                const x = 32 + radius * Math.cos(angle);
-                const y = 32 + radius * Math.sin(angle);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-              }
-              break;
-            case 4: // Star
-              for (let i = 0; i < 5; i++) {
-                const outerRadius = 25;
-                const innerRadius = 10;
-                const outerAngle = i * Math.PI * 2 / 5;
-                const innerAngle = outerAngle + Math.PI / 5;
-                
-                const outerX = 32 + outerRadius * Math.cos(outerAngle);
-                const outerY = 32 + outerRadius * Math.sin(outerAngle);
-                const innerX = 32 + innerRadius * Math.cos(innerAngle);
-                const innerY = 32 + innerRadius * Math.sin(innerAngle);
-                
-                if (i === 0) ctx.moveTo(outerX, outerY);
-                else ctx.lineTo(outerX, outerY);
-                
-                ctx.lineTo(innerX, innerY);
-              }
-              ctx.closePath();
-              break;
-          }
-          
-          ctx.stroke();
-          
-          // Add some dots
-          ctx.fillStyle = `rgba(255, ${150 + Math.random() * 105}, 50, 0.9)`;
-          for (let i = 0; i < 5; i++) {
-            const x = 10 + Math.random() * 44;
-            const y = 10 + Math.random() * 44;
-            const radius = 1 + Math.random() * 2;
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          
-          return canvas;
-        };
-        
-        // Generate several rune textures
-        for (let i = 0; i < 8; i++) {
-          const runeCanvas = generateRuneTexture();
-          const runeTexture = new THREE.CanvasTexture(runeCanvas);
-          runeTextures.push(runeTexture);
-        }
-        
-        // Create runes around the portal
-        for (let i = 0; i < 12; i++) {
-          const angle = (i / 12) * Math.PI * 2;
-          const radius = 2.1 + Math.random() * 0.2;
-          
-          const runeGeometry = new THREE.PlaneGeometry(0.4, 0.4);
-          const runeMaterial = new THREE.MeshBasicMaterial({
-            map: runeTextures[i % runeTextures.length],
-            transparent: true,
-            opacity: 0.9,
-            side: THREE.DoubleSide
-          });
-          
-          const rune = new THREE.Mesh(runeGeometry, runeMaterial);
-          rune.position.x = Math.cos(angle) * radius;
-          rune.position.y = Math.sin(angle) * radius;
-          rune.position.z = 0.1;
-          rune.userData = { 
-            angle: angle,
-            radius: radius,
-            rotationSpeed: 0.01 + Math.random() * 0.01,
-            pulseSpeed: 0.003 + Math.random() * 0.002
-          };
-          
-          portal.add(rune);
-          runes.push(rune);
-        }
-      };
-      
-      createRunes();
+      // We've removed the runes as per request to make the portal cleaner
+      // and let the particles form the circular shape naturally
       
       // Create particles
       const createParticles = () => {
-        const particleCount = 200;
+        // Increase particle count for more density
+        const particleCount = 1200; // Increased for better circle formation
         const particleGeometry = new THREE.BufferGeometry();
         const particlePositions = new Float32Array(particleCount * 3);
         const particleSizes = new Float32Array(particleCount);
         const particleColors = new Float32Array(particleCount * 3);
+        const particleVelocities = new Float32Array(particleCount * 3);
+        const particleLifetimes = new Float32Array(particleCount);
         
+        // Create a more even distribution of particles around the circle
         for (let i = 0; i < particleCount; i++) {
-          // Random position in a circular area around the portal
-          const angle = Math.random() * Math.PI * 2;
-          const radius = 1.5 + Math.random() * 1.5;
+          // Create two types of particles: ring particles and spark particles
+          const isRingParticle = i < particleCount * 0.85; // 85% ring particles to form a clearer circle
           
-          particlePositions[i * 3] = Math.cos(angle) * radius;
-          particlePositions[i * 3 + 1] = Math.sin(angle) * radius;
-          particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
-          
-          // Random size
-          particleSizes[i] = 0.03 + Math.random() * 0.05;
-          
-          // Color (orange to yellow)
-          particleColors[i * 3] = 1.0; // R
-          particleColors[i * 3 + 1] = 0.3 + Math.random() * 0.4; // G
-          particleColors[i * 3 + 2] = 0.0; // B
+          if (isRingParticle) {
+            // For ring particles, create a more uniform distribution around the circle
+            // This helps form a more continuous circular shape
+            const angle = (i / (particleCount * 0.85)) * Math.PI * 2;
+            
+            // Smaller radius variation for a more defined circle
+            const radiusVariation = (Math.random() * 0.25 - 0.125); // Smaller variation
+            const radius = 2.0 + radiusVariation;
+            
+            particlePositions[i * 3] = Math.cos(angle) * radius;
+            particlePositions[i * 3 + 1] = Math.sin(angle) * radius;
+            particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 0.1; // Reduced depth variation
+            
+            // Varied sizes for more natural look but still forming a circle
+            particleSizes[i] = 0.025 + Math.random() * 0.035;
+            
+            // Golden-orange colors with less variation for a more consistent look
+            particleColors[i * 3] = 1.0; // R
+            particleColors[i * 3 + 1] = 0.5 + Math.random() * 0.25; // G (more consistent golden)
+            particleColors[i * 3 + 2] = Math.random() * 0.05; // Minimal blue
+            
+            // Minimal velocity for ring particles to maintain the circle shape
+            particleVelocities[i * 3] = (Math.random() - 0.5) * 0.005;
+            particleVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.005;
+            particleVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.005;
+            
+            // Longer lifetime for ring particles to reduce regeneration frequency
+            particleLifetimes[i] = 0.9 + Math.random() * 0.1;
+          } else {
+            // Spark particles - emanating from the ring
+            // Random angle for natural distribution
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 2.0 + (Math.random() * 0.05 - 0.025); // Start very close to the ring
+            
+            particlePositions[i * 3] = Math.cos(angle) * radius;
+            particlePositions[i * 3 + 1] = Math.sin(angle) * radius;
+            particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
+            
+            // Varied sizes for spark particles
+            particleSizes[i] = 0.02 + Math.random() * 0.04;
+            
+            // Brighter colors for sparks
+            particleColors[i * 3] = 1.0; // R
+            particleColors[i * 3 + 1] = 0.7 + Math.random() * 0.3; // G (brighter)
+            particleColors[i * 3 + 2] = 0.05 + Math.random() * 0.1; // Slight blue
+            
+            // Gentler outward velocity for sparks
+            const speed = 0.01 + Math.random() * 0.02; // Slower for smoother effect
+            particleVelocities[i * 3] = Math.cos(angle) * speed;
+            particleVelocities[i * 3 + 1] = Math.sin(angle) * speed;
+            particleVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.01;
+            
+            // Longer lifetime for spark particles to reduce visible resets
+            particleLifetimes[i] = 0.5 + Math.random() * 0.5;
+          }
         }
         
+        // Add the new attributes to the geometry
         particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
         particleGeometry.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
         particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+        particleGeometry.setAttribute('velocity', new THREE.BufferAttribute(particleVelocities, 3));
+        particleGeometry.setAttribute('lifetime', new THREE.BufferAttribute(particleLifetimes, 1));
         
-        // Particle shader material
+        // Particle shader material with improved effects
         const particleMaterial = new THREE.ShaderMaterial({
           uniforms: {
-            time: { value: 0.0 }
+            time: { value: 0.0 },
+            pixelRatio: { value: window.devicePixelRatio }
           },
           vertexShader: `
             attribute float size;
             attribute vec3 color;
+            attribute vec3 velocity;
+            attribute float lifetime;
             varying vec3 vColor;
+            varying float vLifetime;
             uniform float time;
+            uniform float pixelRatio;
+            
+            // Noise functions for more natural movement
+            float random(vec2 st) {
+                return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+            }
             
             void main() {
               vColor = color;
+              vLifetime = lifetime;
+              
+              // Base position with velocity applied
               vec3 pos = position;
               
-              // Add some movement
+              // Use continuous time without resetting to prevent jarring effects
+              // Instead of cycling, we'll use a continuous flow with individual particle timing
+              float particleOffset = random(vec2(position.x * 0.1, position.y * 0.1)) * 100.0; // Unique offset per particle
+              float continuousTime = time + particleOffset;
+              float particleTime = fract(continuousTime * 0.1 / lifetime); // Smoother cycle
+              
+              // Apply velocity with continuous time for smoother movement
+              pos += velocity * continuousTime * 0.2; // Reduced velocity impact
+              
+              // Add some turbulence based on position and time
+              float turbulence = sin(continuousTime * 0.5 + length(pos.xy) * 2.0) * 0.02;
+              
+              // Calculate angle and radius for circular movement
               float angle = atan(pos.y, pos.x);
               float radius = length(pos.xy);
-              float speed = (1.5 - min(radius, 1.5)) * 0.3;
               
-              // Spiral movement
-              angle += time * speed;
-              pos.x = cos(angle) * radius;
-              pos.y = sin(angle) * radius;
+              // For ring particles, maintain the circular shape more strictly
+              if (lifetime > 0.7) { // Ring particles have longer lifetime
+                // Keep particles closer to the ideal ring radius (2.0)
+                float idealRadius = 2.0;
+                float radiusCorrection = (idealRadius - radius) * 0.03;
+                radius += radiusCorrection;
+                
+                // Add very subtle spiral movement
+                float spiralSpeed = 0.05 * random(vec2(angle, radius));
+                angle += continuousTime * spiralSpeed;
+                
+                // Recalculate position with corrected radius and angle
+                pos.x = cos(angle) * radius;
+                pos.y = sin(angle) * radius;
+                
+                // Add extremely subtle radial pulsing that doesn't break the circle
+                radius += sin(continuousTime * 0.2 + angle * 2.0) * 0.01;
+                pos.x = cos(angle) * radius;
+                pos.y = sin(angle) * radius;
+              } else {
+                // For spark particles, add smooth outward movement
+                // Use continuous timing to prevent visible resets
+                if (particleTime > 0.9) {
+                  // Smooth fade out at the end of life
+                  vColor *= smoothstep(1.0, 0.9, particleTime);
+                }
+              }
               
-              // Pulsing size
-              float pulseFactor = 1.0 + 0.2 * sin(time * 2.0 + angle * 3.0);
+              // Add turbulence
+              pos.x += turbulence * sin(time * 4.0 + pos.y * 10.0);
+              pos.y += turbulence * cos(time * 3.0 + pos.x * 10.0);
+              
+              // Pulsing size effect based on particle type
+              float pulseFactor;
+              if (lifetime > 0.7) {
+                // Subtle pulse for ring particles
+                pulseFactor = 1.0 + 0.15 * sin(time * 3.0 + angle * 5.0);
+              } else {
+                // Stronger pulse for spark particles
+                pulseFactor = 1.0 + 0.3 * sin(time * 5.0 + random(vec2(angle, radius)) * 10.0);
+              }
               
               vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-              gl_PointSize = size * pulseFactor * (300.0 / -mvPosition.z);
+              gl_PointSize = size * pulseFactor * (350.0 / -mvPosition.z) * pixelRatio;
               gl_Position = projectionMatrix * mvPosition;
             }
           `,
           fragmentShader: `
             varying vec3 vColor;
+            varying float vLifetime;
             
             void main() {
-              // Create circular particles
-              float r = length(gl_PointCoord - vec2(0.5));
-              if (r > 0.5) discard;
+              // Create better looking particles with soft glow
+              vec2 uv = gl_PointCoord.xy - 0.5;
+              float r = length(uv);
               
-              // Soft edge
-              float alpha = 1.0 - smoothstep(0.3, 0.5, r);
-              gl_FragColor = vec4(vColor, alpha);
+              // Different particle appearance based on lifetime
+              if (vLifetime > 0.7) {
+                // Ring particles - softer glow
+                if (r > 0.5) discard;
+                
+                // Gradient from center to edge
+                float glow = 1.0 - smoothstep(0.2, 0.5, r);
+                
+                // Add inner brightness
+                float innerGlow = smoothstep(0.4, 0.0, r);
+                vec3 finalColor = mix(vColor, vec3(1.0, 0.9, 0.6), innerGlow * 0.6);
+                
+                // Soft edge
+                float alpha = glow * 0.9;
+                gl_FragColor = vec4(finalColor, alpha);
+              } else {
+                // Spark particles - sharper with trail effect
+                if (r > 0.5) discard;
+                
+                // More intense center
+                float intensity = 1.0 - smoothstep(0.0, 0.5, r);
+                intensity = pow(intensity, 1.5);
+                
+                // Brighter core
+                vec3 finalColor = mix(vColor, vec3(1.0, 0.95, 0.8), intensity * 0.7);
+                
+                // Sharper edge but still with some glow
+                float alpha = intensity * 0.95;
+                gl_FragColor = vec4(finalColor, alpha);
+              }
             }
           `,
           transparent: true,
@@ -363,9 +386,99 @@ export default {
           rune.position.y = Math.sin(newAngle) * rune.userData.radius;
         });
         
-        // Update particles
+        // Update particles with smoother, more continuous behavior
         if (particles && particles.material.uniforms) {
-          particles.material.uniforms.time.value += 0.01;
+          // Use a smaller increment for smoother time progression
+          particles.material.uniforms.time.value += 0.005;
+          
+          // Only regenerate particles that are truly needed
+          // This prevents the jarring reset effect by making regeneration more gradual
+          const positions = particles.geometry.attributes.position.array;
+          const velocities = particles.geometry.attributes.velocity.array;
+          const colors = particles.geometry.attributes.color.array;
+          const sizes = particles.geometry.attributes.size.array;
+          const lifetimes = particles.geometry.attributes.lifetime.array;
+          
+          // Regenerate fewer particles each frame for a more continuous effect
+          const particleCount = positions.length / 3;
+          const regenerateCount = Math.floor(particleCount * 0.005); // Regenerate only 0.5% of particles each frame
+          
+          // Create a continuous distribution of particles around the circle
+          // by selecting regeneration positions strategically
+          for (let i = 0; i < regenerateCount; i++) {
+            // Instead of completely random selection, use a more strategic approach
+            // to maintain the circular shape
+            const index = Math.floor(Math.random() * particleCount);
+            const i3 = index * 3;
+            
+            // 80% chance to create ring particle, 20% chance for spark
+            // Increasing ring particles to better form the circular shape
+            const isRingParticle = Math.random() < 0.8;
+            
+            if (isRingParticle) {
+              // Create a more uniform distribution around the circle
+              // by using strategic angle placement
+              const baseAngle = (i / regenerateCount) * Math.PI * 2; // Distribute evenly
+              const angleVariation = (Math.random() * 0.2) - 0.1; // Small variation
+              const angle = baseAngle + angleVariation;
+              
+              // Keep radius variations smaller to maintain a cleaner circle
+              const radiusVariation = (Math.random() * 0.2) - 0.1; // Smaller variation
+              const radius = 2.0 + radiusVariation;
+              
+              positions[i3] = Math.cos(angle) * radius;
+              positions[i3 + 1] = Math.sin(angle) * radius;
+              positions[i3 + 2] = (Math.random() - 0.5) * 0.1; // Reduced depth variation
+              
+              // Even more subtle velocity for ring particles
+              // This helps maintain the circular shape
+              velocities[i3] = (Math.random() - 0.5) * 0.005;
+              velocities[i3 + 1] = (Math.random() - 0.5) * 0.005;
+              velocities[i3 + 2] = (Math.random() - 0.5) * 0.005;
+              
+              // Golden-orange colors with less variation for consistency
+              colors[i3] = 1.0;
+              colors[i3 + 1] = 0.5 + Math.random() * 0.2; // More consistent gold
+              colors[i3 + 2] = Math.random() * 0.05; // Less blue
+              
+              // More consistent sizes for ring particles
+              sizes[index] = 0.025 + Math.random() * 0.03;
+              // Longer lifetimes to reduce frequency of regeneration
+              lifetimes[index] = 0.9 + Math.random() * 0.1;
+            } else {
+              // Spark particles - create them at specific points on the ring
+              // to maintain the illusion of continuous emission
+              const angle = Math.random() * Math.PI * 2;
+              const radius = 2.0 + (Math.random() * 0.05 - 0.025); // Very close to the ring
+              
+              positions[i3] = Math.cos(angle) * radius;
+              positions[i3 + 1] = Math.sin(angle) * radius;
+              positions[i3 + 2] = (Math.random() - 0.5) * 0.2;
+              
+              // Gentler outward velocity for sparks
+              const speed = 0.01 + Math.random() * 0.02; // Slower movement
+              velocities[i3] = Math.cos(angle) * speed;
+              velocities[i3 + 1] = Math.sin(angle) * speed;
+              velocities[i3 + 2] = (Math.random() - 0.5) * 0.01;
+              
+              // Brighter colors for sparks
+              colors[i3] = 1.0;
+              colors[i3 + 1] = 0.7 + Math.random() * 0.3; // Brighter gold
+              colors[i3 + 2] = 0.05 + Math.random() * 0.1; // Slight blue
+              
+              // Varied sizes for spark particles
+              sizes[index] = 0.02 + Math.random() * 0.04;
+              // Longer lifetimes for smoother transitions
+              lifetimes[index] = 0.5 + Math.random() * 0.5;
+            }
+          }
+          
+          // Mark attributes as needing update
+          particles.geometry.attributes.position.needsUpdate = true;
+          particles.geometry.attributes.velocity.needsUpdate = true;
+          particles.geometry.attributes.color.needsUpdate = true;
+          particles.geometry.attributes.size.needsUpdate = true;
+          particles.geometry.attributes.lifetime.needsUpdate = true;
         }
         
         // Make portal light flicker slightly

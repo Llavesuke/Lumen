@@ -202,6 +202,46 @@ class PlaydedeController extends Controller
     }
 
     /**
+     * Forzar actualización del dominio de Playdede
+     * Este endpoint actualiza el dominio de Playdede inmediatamente, ignorando la caché
+     */
+    public function forceUpdateDomain()
+    {
+        try {
+            Log::info('Forzando actualización del dominio de Playdede desde el controlador');
+            
+            $oldDomain = $this->playdedeService->baseUrl ?? 'Unknown';
+            $newDomain = $this->playdedeService->forceUpdateDomain();
+            
+            Log::info('Dominio de Playdede actualizado', [
+                'old_domain' => $oldDomain,
+                'new_domain' => $newDomain,
+                'is_different' => ($oldDomain !== $newDomain) ? 'Sí' : 'No'
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Dominio de Playdede actualizado correctamente',
+                'old_domain' => $oldDomain,
+                'new_domain' => $newDomain,
+                'updated' => ($oldDomain !== $newDomain)
+            ]);
+            
+        } catch (Throwable $e) {
+            Log::error('Error al forzar la actualización del dominio: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el dominio de Playdede',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Intenta recuperar una URL m3u8 válida desde los logs recientes
      * Esta función mejorada busca específicamente URLs m3u8 recientes en los logs
      */

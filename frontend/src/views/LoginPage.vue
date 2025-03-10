@@ -140,13 +140,6 @@ export default {
           />
           
           <div class="form-options">
-            <label class="form-checkbox">
-              <input 
-                type="checkbox"
-                v-model="rememberMe"
-              >
-              <span class="checkbox-text">Recordarme</span>
-            </label>
             <router-link to="/forgot-password" class="forgot-password-link">
               ¿Olvidaste tu contraseña?
             </router-link>
@@ -427,7 +420,7 @@ export default {
   }
   
   .forgot-password-link {
-    align-self: flex-end;
+    align-self: center;
   }
   
   .social-login-buttons {

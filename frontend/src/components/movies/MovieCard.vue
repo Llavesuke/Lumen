@@ -1,4 +1,7 @@
 <script>
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+
 export default {
   name: 'MovieCard',
   props: {
@@ -11,43 +14,96 @@ export default {
       default: false
     }
   },
-  data() {
-    return {
-      isHovered: false,
-      logoError: false
-    };
-  },
-  computed: {
-    moviePath() {
-      return `/movie/${this.movie.tmdb_id}`;
-    },
-    backgroundStyle() {
+  setup(props) {
+    const router = useRouter();
+    const isHovered = ref(false);
+    const logoError = ref(false);
+    const isExpanding = ref(false);
+
+    // Generate the correct path based on content type
+    const moviePath = computed(() => {
+      return `/${props.movie.type || 'movie'}/${props.movie.tmdb_id}`;
+    });
+
+    const backgroundStyle = computed(() => {
       return {
-        backgroundImage: `url(${this.movie.background_image})`
+        backgroundImage: `url(${props.movie.background_image})`
       };
-    },
+    });
+
     // Check if the logo is a real logo or a poster being used as fallback
-    hasValidLogo() {
-      return this.movie.logo_image && !this.logoError;
-    },
+    const hasValidLogo = computed(() => {
+      return props.movie.logo_image && !logoError.value;
+    });
+
     // Determine if card should show hover state (either manually hovered or marked as active)
-    showHoverState() {
-      return this.isHovered || this.isActive;
-    }
-  },
-  methods: {
-    addToMyList() {
+    const showHoverState = computed(() => {
+      return isHovered.value || props.isActive || isExpanding.value;
+    });
+
+    const addToMyList = () => {
       // This will be implemented later
-      console.log('Add to my list:', this.movie.tmdb_id);
-    },
-    playMovie() {
-      // This will be implemented later
-      console.log('Play movie:', this.movie.tmdb_id);
-    },
-    handleLogoError() {
+      console.log('Add to my list:', props.movie.tmdb_id);
+    };
+
+    const playMovie = () => {
+      const formattedTitle = props.movie.formatted_title || props.movie.title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
+      const tmdbId = props.movie.tmdb_id;
+      
+      if (props.movie.type === 'series' || props.movie.type === 'anime') {
+        // If it's a series, navigate to player with season 1, episode 1
+        router.push({
+          name: 'player',
+          query: {
+            title: props.movie.title, // Use original title for display
+            tmdb_id: tmdbId,
+            type: props.movie.type,
+            season: 1,
+            episode: 1,
+            background_image: props.movie.background_image,
+            logo_image: props.movie.logo_image,
+            apiUrl: `http://localhost:8000/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=1&episode=1`
+          }
+        });
+      } else {
+        // If it's a movie
+        router.push({
+          name: 'player',
+          query: {
+            title: props.movie.title, // Use original title for display
+            tmdb_id: tmdbId,
+            type: 'movie',
+            background_image: props.movie.background_image,
+            logo_image: props.movie.logo_image,
+            apiUrl: `http://localhost:8000/api/v1/playdede/movie?title=${formattedTitle}&tmdb_id=${tmdbId}`
+          }
+        });
+      }
+    };
+
+    const handleLogoError = () => {
       // Mark the logo as failed to load
-      this.logoError = true;
-    }
+      logoError.value = true;
+    };
+
+    const navigateToDetails = () => {
+      // Simple navigation without animation
+      router.push(moviePath.value);
+    };
+
+    return {
+      isHovered,
+      logoError,
+      isExpanding,
+      moviePath,
+      backgroundStyle,
+      hasValidLogo,
+      showHoverState,
+      addToMyList,
+      playMovie,
+      handleLogoError,
+      navigateToDetails
+    };
   }
 };
 </script>
@@ -78,10 +134,10 @@ export default {
           <i class="fas fa-play"></i>
           <span>Ver ahora</span>
         </button>
-        <router-link :to="moviePath" class="movie-card__action-button movie-card__action-button--info">
+        <button @click="navigateToDetails" class="movie-card__action-button movie-card__action-button--info">
           <i class="fas fa-info-circle"></i>
           <span>Detalles</span>
-        </router-link>
+        </button>
       </div>
     </div>
   </div>
@@ -127,7 +183,7 @@ export default {
     z-index: 10;
     box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
   }
-
+  
   /* These rules cause cards to move apart - removing them */
   /* Only apply the push effect in MovieGenreSection, not in search page */
   .movie-genre-section__item.movie-card:hover ~ .movie-card {

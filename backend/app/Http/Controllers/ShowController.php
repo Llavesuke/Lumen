@@ -164,7 +164,13 @@ class ShowController extends Controller
         }
 
         // Añadir a favoritos
-        $favorites[] = ShowList::formatShowData($request->all());
+        $favorites[] = [
+            'tmdb_id' => $request->tmdb_id,
+            'title' => $request->title,
+            'background_image' => $request->background_image,
+            'logo_image' => $request->logo_image,
+            'type' => $request->type
+        ];
         
         // Actualizar favoritos en la base de datos
         $user->user_favorites = $favorites;

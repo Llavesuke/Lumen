@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\ShowController;
 use App\Http\Controllers\ShowListController;
 use App\Http\Controllers\PlaydedeController;
+use App\Http\Controllers\ProxyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,6 +32,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/shows/popular', [ShowController::class, 'getPopularShows']);
     Route::get('/movies/{tmdbId}', [ShowController::class, 'getMovieDetails']);
     Route::get('/series/{tmdbId}', [ShowController::class, 'getSeriesDetails']);
+    
+    // HLS Proxy Routes - sin autenticación para que funcione dentro del iframe
+    Route::get('/proxy/hls/{path}', [ProxyController::class, 'proxyHls'])->where('path', '.*');
 
     // Protected Routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -60,5 +64,6 @@ Route::prefix('v1')->group(function () {
     Route::prefix('playdede')->group(function () {
         Route::get('/movie', [PlaydedeController::class, 'getMovieSources']);
         Route::get('/series', [PlaydedeController::class, 'getSeriesEpisodeSources']);
+        Route::get('/update-domain', [PlaydedeController::class, 'forceUpdateDomain']);
     });
 });

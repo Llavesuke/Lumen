@@ -188,7 +188,7 @@ class TMDBService
                     'tmdb_id' => $data['id'],
                     'title' => $data['title'],
                     'release_year' => date('Y', strtotime($data['release_date'] ?? 'now')),
-                    'rating' => number_format($data['vote_average'] / 10, 1), // Convert from 0-100 to 0-10 with 1 decimal
+                    'rating' => round($data['vote_average'] * 10), // Convert from 0-10 to 0-100 and round to whole number
                     'age_classification' => $this->extractAgeRating($data),
                     'background_image' => $this->imageBaseUrl . $data['backdrop_path'],
                     'logo_image' => $this->getShowLogo($tmdbId, 'movie'),
@@ -237,7 +237,7 @@ class TMDBService
                     'tmdb_id' => $data['id'],
                     'title' => $data['name'],
                     'release_year' => date('Y', strtotime($data['first_air_date'] ?? 'now')),
-                    'rating' => number_format($data['vote_average'] / 10, 1), // Convert from 0-100 to 0-10 with 1 decimal
+                    'rating' => round($data['vote_average'] * 10),
                     'age_classification' => $this->extractTvContentRating($data),
                     'background_image' => $this->imageBaseUrl . $data['backdrop_path'],
                     'logo_image' => $this->getShowLogo($tmdbId, 'tv'),
@@ -278,9 +278,10 @@ class TMDBService
                     $episodes[] = [
                         'name' => $episode['name'],
                         'episode_number' => $episode['episode_number'],
-                        'rating' => number_format($episode['vote_average'] / 10, 1),
+                        'rating' => round($data['vote_average'] * 10),
                         'runtime' => $episode['runtime'] ?? 0,
-                        'air_date' => $this->formatDate($episode['air_date'] ?? null)
+                        'air_date' => $this->formatDate($episode['air_date'] ?? null),
+                        'still_image' => $episode['still_path'] ? $this->imageBaseUrl . $episode['still_path'] : null
                     ];
                 }
                 
