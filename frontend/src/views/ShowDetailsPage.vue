@@ -11,6 +11,7 @@ import RatingInfo from '../components/Details/RatingInfo.vue';
 import ShowLogo from '../components/Details/ShowLogo.vue';
 import SynopsisButton from '../components/Details/SynopsisButton.vue';
 import EpisodesList from '../components/Details/EpisodesList.vue';
+import AddToListModal from '../components/lists/AddToListModal.vue';
 
 export default {
   name: 'ShowDetailsPage',
@@ -22,7 +23,8 @@ export default {
     RatingInfo,
     ShowLogo,
     SynopsisButton,
-    EpisodesList
+    EpisodesList,
+    AddToListModal
   },
   setup() {
     const route = useRoute();
@@ -37,6 +39,8 @@ export default {
     const isTransformed = ref(false);
     const logoError = ref(false);
     const isLikeLoading = ref(false);
+    const showAddToListModal = ref(false);
+    const isAddToListLoading = ref(false);
 
     // Format title for URL
     const formatTitle = (title) => {
@@ -87,21 +91,65 @@ export default {
     
     // Handle play button click
     const playContent = () => {
-      if (isMovie.value) {
-        router.push(`/watch/movie/${route.params.id}`);
+      // Format the title for API URL
+      const formattedTitle = content.value?.formatted_title || 
+        formatTitle(content.value?.title || '');
+      
+      const tmdbId = route.params.id;
+      const contentType = isMovie.value ? 'movie' : 'series';
+      
+      if (contentType === 'series' || contentType === 'anime') {
+        // If it's a series, navigate to player with season 1, episode 1
+        router.push({
+          path: '/player',
+          query: {
+            title: content.value?.title || '', // Use original title for display
+            tmdb_id: tmdbId,
+            type: contentType,
+            season: 1,
+            episode: 1,
+            background_image: content.value?.background_image || '',
+            logo_image: content.value?.logo_image || '',
+            apiUrl: `http://localhost:8000/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=1&episode=1`
+          }
+        });
       } else {
-        // For series we'll need season and episode info - use first episode as default
-        const firstSeason = content.value.seasons[0];
-        const firstEpisode = firstSeason?.episodes[0];
-        if (firstSeason && firstEpisode) {
-          router.push(`/watch/series/${route.params.id}/${firstSeason.season_number}/${firstEpisode.episode_number}`);
-        }
+        // If it's a movie
+        router.push({
+          path: '/player',
+          query: {
+            title: content.value?.title || '', // Use original title for display
+            tmdb_id: tmdbId,
+            type: 'movie',
+            background_image: content.value?.background_image || '',
+            logo_image: content.value?.logo_image || '',
+            apiUrl: `http://localhost:8000/api/v1/playdede/movie?title=${formattedTitle}&tmdb_id=${tmdbId}`
+          }
+        });
       }
     };
     
     // Play specific episode
     const playEpisode = (season, episode) => {
-      router.push(`/watch/series/${route.params.id}/${season}/${episode}`);
+      // Format the title for API URL
+      const formattedTitle = content.value?.formatted_title || 
+        formatTitle(content.value?.title || '');
+      
+      const tmdbId = route.params.id;
+      
+      router.push({
+        path: '/player',
+        query: {
+          title: content.value?.title || '', // Use original title for display
+          tmdb_id: tmdbId,
+          type: 'series',
+          season: season,
+          episode: episode,
+          background_image: content.value?.background_image || '',
+          logo_image: content.value?.logo_image || '',
+          apiUrl: `http://localhost:8000/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=${season}&episode=${episode}`
+        }
+      });
     };
     
     // Toggle synopsis display
@@ -192,6 +240,11 @@ export default {
       logoLoaded.value = true;
     };
     
+    // Toggle add to list modal
+    const toggleAddToListModal = () => {
+      showAddToListModal.value = !showAddToListModal.value;
+    };
+    
     return {
       content,
       loading,
@@ -210,7 +263,10 @@ export default {
       toggleLike,
       handleLogoError,
       handleLogoLoaded,
-      isLikeLoading
+      isLikeLoading,
+      showAddToListModal,
+      isAddToListLoading,
+      toggleAddToListModal
     };
   }
 };
@@ -223,7 +279,13 @@ export default {
       
       <div class="container">
         <PlayButton :content="content" @play="playContent" />
-        <ActionButtons :liked="liked" :isLikeLoading="isLikeLoading" @toggle-like="toggleLike" />
+        <ActionButtons 
+          :liked="liked" 
+          :isLikeLoading="isLikeLoading"
+          :isAddToListLoading="isAddToListLoading"
+          @toggle-like="toggleLike"
+          @add-to-list="toggleAddToListModal"
+        />
         <RatingInfo :ageClassification="content.age_classification" :rating="content.rating" />
         <ShowLogo 
           :logoImage="content.logo_image" 
@@ -254,21 +316,25 @@ export default {
           />
         </div>
       </div>
+      
+      <!-- Add to List Modal -->
+      <AddToListModal
+        :isVisible="showAddToListModal"
+        :show="content"
+        @close="toggleAddToListModal"
+        @added="toggleAddToListModal"
+      />
     </div>
-    
+
     <!-- Loading state -->
     <div v-else-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
-      <p>Cargando...</p>
     </div>
-    
+
     <!-- Error state -->
     <div v-else-if="error" class="error-container">
-      <i class="fas fa-exclamation-circle error-icon"></i>
       <p>{{ error }}</p>
-      <button @click="fetchShowDetails" class="retry-button">
-        <i class="fas fa-redo"></i> Reintentar
-      </button>
+      <button @click="fetchShowDetails" class="retry-button">Reintentar</button>
     </div>
   </PrivateLayout>
 </template>
@@ -355,7 +421,10 @@ export default {
     top: 40px;
     left: 50%;
     transform: translateX(-50%);
-    width: max-content;
+    width: 80%;
+    max-width: 280px;
+    display: flex;
+    justify-content: center;
   }
   
   .container :deep(.action-buttons) {
@@ -364,7 +433,10 @@ export default {
     left: 50%;
     transform: translateX(-50%);
     align-items: center;
-    width: max-content;
+    width: 80%;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
   }
 }
 

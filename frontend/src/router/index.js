@@ -81,6 +81,18 @@ const router = createRouter({
       name: 'player',
       component: () => import('../views/PlayerPage.vue'),
       beforeEnter: requireAuth
+    },
+    {
+      path: '/lists',
+      name: 'lists',
+      component: () => import('../views/ListsPage.vue'),
+      beforeEnter: requireAuth
+    },
+    {
+      path: '/lists/:id',
+      name: 'list-detail',
+      component: () => import('../views/ListDetailPage.vue'),
+      beforeEnter: requireAuth
     }
   ]
 });

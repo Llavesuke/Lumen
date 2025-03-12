@@ -118,4 +118,17 @@ export default {
     left: 20px;
   }
 }
+
+@media (max-width: 470px) {
+  .rating-info {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .rating-bar {
+    flex: 1;
+    max-width: 150px;
+  }
+}
 </style>

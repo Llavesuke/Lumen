@@ -100,7 +100,7 @@ export default {
             <router-link to="/movies" class="nav__link" @click="mobileMenuOpen = false">Inicio</router-link>
             <router-link to="/all-movies" class="nav__link" @click="mobileMenuOpen = false">Películas</router-link>
             <router-link to="/all-series" class="nav__link" @click="mobileMenuOpen = false">Series</router-link>
-            <router-link to="/my-list" class="nav__link" @click="mobileMenuOpen = false">Mi Lista</router-link>
+            <router-link to="/lists" class="nav__link" @click="mobileMenuOpen = false">Listas</router-link>
           </div>
         </div>
         <div class="nav__right">

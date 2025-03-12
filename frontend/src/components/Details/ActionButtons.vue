@@ -63,6 +63,16 @@ export default {
   gap: 12px;
 }
 
+@media (max-width: 470px) {
+  .action-buttons {
+    width: 100%;
+  }
+  
+  .like-button, .add-to-list {
+    width: 100%;
+  }
+}
+
 .like-button {
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -159,6 +169,16 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+@media (max-width: 470px) {
+  .action-buttons {
+    width: 100%;
+  }
+  
+  .like-button, .add-to-list {
+    width: 100%;
+  }
 }
 
 .add-to-list {

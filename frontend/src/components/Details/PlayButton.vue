@@ -27,38 +27,39 @@ export default {
     const isMovie = computed(() => route.path.includes('/movie/'));
     
     const handlePlay = () => {
-      // Format the title for API URL
+      // Format the title for API URL - using the same logic as MovieCard component
       const formattedTitle = props.content?.formatted_title || 
         (props.content?.title ? props.content.title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '') : '');
       
       const tmdbId = route.params.id;
+      const contentType = props.content?.type || (isMovie.value ? 'movie' : 'series');
       
-      if (isMovie.value) {
-        // If it's a movie, redirect to player with movie API URL
+      if (contentType === 'series' || contentType === 'anime') {
+        // If it's a series, navigate to player with season 1, episode 1
         router.push({
-          name: 'player',
+          path: '/player',
           query: {
-            title: props.content?.title || '', // Título original sin formatear
+            title: props.content?.title || '', // Use original title for display
             tmdb_id: tmdbId,
-            type: 'movie',
-            background_image: props.content?.background_image || '',
-            logo_image: props.content?.logo_image || '',
-            apiUrl: `http://localhost:8000/api/v1/playdede/movie?title=${formattedTitle}&tmdb_id=${tmdbId}`
-          }
-        });
-      } else {
-        // If it's a series, redirect to player with series API URL
-        router.push({
-          name: 'player',
-          query: {
-            title: props.content?.title || '', // Título original sin formatear
-            tmdb_id: tmdbId,
-            type: 'series',
+            type: contentType,
             season: 1,
             episode: 1,
             background_image: props.content?.background_image || '',
             logo_image: props.content?.logo_image || '',
             apiUrl: `http://localhost:8000/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=1&episode=1`
+          }
+        });
+      } else {
+        // If it's a movie
+        router.push({
+          path: '/player',
+          query: {
+            title: props.content?.title || '', // Use original title for display
+            tmdb_id: tmdbId,
+            type: 'movie',
+            background_image: props.content?.background_image || '',
+            logo_image: props.content?.logo_image || '',
+            apiUrl: `http://localhost:8000/api/v1/playdede/movie?title=${formattedTitle}&tmdb_id=${tmdbId}`
           }
         });
       }
@@ -122,6 +123,14 @@ export default {
     border-top: 12px solid transparent;
     border-left: 20px solid black;
     border-bottom: 12px solid transparent;
+  }
+}
+
+@media (max-width: 470px) {
+  .play-button-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
 }
 </style>

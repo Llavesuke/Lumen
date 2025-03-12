@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import './assets/fontawesome-custom.css'
 import { initializeAuth } from './plugins/auth'
+import './plugins/axios'
 
 const app = createApp(App)
 app.use(createPinia())

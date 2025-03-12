@@ -985,3 +985,33 @@ export default {
   gap: 0.5rem;
 }
 </style>
+
+<style scoped>
+/* Override MovieCard hover effects for non-desktop devices */
+@media (hover: none) {
+  :deep(.movie-card:active),
+  :deep(.movie-card:focus),
+  :deep(.movie-card) {
+    transform: none !important;
+    box-shadow: none !important;
+    z-index: 1 !important;
+  }
+  
+  :deep(.movie-card--active) {
+    transform: none !important;
+    box-shadow: none !important;
+    z-index: 1 !important;
+  }
+  
+  /* Prevent the push effect between cards */
+  :deep(.movie-genre-section__item.movie-card:active ~ .movie-card),
+  :deep(.movie-genre-section__item.movie-card:focus ~ .movie-card) {
+    transform: none !important;
+  }
+  
+  :deep(.movie-genre-section__item.movie-card:has(~ .movie-card:active)),
+  :deep(.movie-genre-section__item.movie-card:has(~ .movie-card:focus)) {
+    transform: none !important;
+  }
+}
+</style>
