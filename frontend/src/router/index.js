@@ -41,6 +41,18 @@ const router = createRouter({
       beforeEnter: requireAuth
     },
     {
+      path: '/all-movies',
+      name: 'all-movies',
+      component: () => import('../views/AllMoviesPage.vue'),
+      beforeEnter: requireAuth
+    },
+    {
+      path: '/all-series',
+      name: 'all-series',
+      component: () => import('../views/AllSeriesPage.vue'),
+      beforeEnter: requireAuth
+    },
+    {
       path: '/movie/:id/:formatted_title?',
       name: 'movie-details',
       component: () => import('../views/ShowDetailsPage.vue'),

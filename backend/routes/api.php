@@ -30,8 +30,12 @@ Route::prefix('v1')->group(function () {
     Route::get('/shows/genre/{genre}', [ShowController::class, 'getShowsByGenre']);
     Route::get('/shows/keyword/{keyword}', [ShowController::class, 'getShowsByKeyword']);
     Route::get('/shows/popular', [ShowController::class, 'getPopularShows']);
+    Route::get('/trending/movie/{timeWindow}', [ShowController::class, 'getTrendingMovies']);
+    Route::get('/trending/tv/{timeWindow}', [ShowController::class, 'getTrendingTvShows']);
     Route::get('/movies/{tmdbId}', [ShowController::class, 'getMovieDetails']);
     Route::get('/series/{tmdbId}', [ShowController::class, 'getSeriesDetails']);
+    Route::get('/all-movies', [ShowController::class, 'getAllMovies']);
+    Route::get('/all-series', [ShowController::class, 'getAllSeries']);
     
     // HLS Proxy Routes - sin autenticación para que funcione dentro del iframe
     Route::get('/proxy/hls/{path}', [ProxyController::class, 'proxyHls'])->where('path', '.*');

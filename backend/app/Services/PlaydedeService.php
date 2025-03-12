@@ -450,6 +450,11 @@ class PlaydedeService
             
             Log::info('Getting player URLs from content: ' . $url);
             
+            if (empty($url)) {
+                Log::warning('Empty URL provided to getPlayerUrls');
+                return [];
+            }
+
             $response = Http::timeout($this->requestTimeout)
                 ->withOptions([
                     'verify' => false,
@@ -560,6 +565,21 @@ class PlaydedeService
                 return null;
             }
             
+            // Check if the domain should be skipped
+            $parsedUrl = parse_url($playerUrl);
+            if (!$parsedUrl || !isset($parsedUrl['host'])) {
+                Log::warning('Invalid player URL format');
+                return null;
+            }
+            
+            // List of domains to skip
+            $skipDomains = ['lulu.st'];
+            
+            if (in_array($parsedUrl['host'], $skipDomains)) {
+                Log::info("Skipping {$parsedUrl['host']} domain");
+                return null;
+            }
+            
             // Sanitizar URL para evitar problemas con caracteres especiales
             $playerUrl = $this->sanitizePlayerUrl($playerUrl);
             
@@ -593,37 +613,15 @@ class PlaydedeService
                     return $m3u8Url;
                 } else {
                     Log::warning('URL returned by Puppeteer is not a valid m3u8 URL: ' . $m3u8Url);
+                    return null;
                 }
             }
             
             Log::warning('No m3u8 URL returned by Puppeteer service');
-            
-            // Intentar llamar directamente al playerUrl y buscar el m3u8 manualmente
-            $m3u8Url = $this->fallbackExtractM3u8($playerUrl);
-            if ($m3u8Url) {
-                Log::info('Found m3u8 URL via fallback method: ' . $m3u8Url);
-                return $m3u8Url;
-            }
-            
             return null;
             
         } catch (\Exception $e) {
-            Log::error('Error getting m3u8 URL from player: ' . $e->getMessage());
-            
-            // Intento de recuperación en caso de timeout
-            if (strpos($e->getMessage(), 'timeout') !== false || strpos($e->getMessage(), 'Connection timed out') !== false) {
-                Log::info('Timeout occurred, trying fallback method');
-                try {
-                    $m3u8Url = $this->fallbackExtractM3u8($playerUrl);
-                    if ($m3u8Url) {
-                        Log::info('Found m3u8 URL via fallback method after timeout: ' . $m3u8Url);
-                        return $m3u8Url;
-                    }
-                } catch (\Exception $fallbackError) {
-                    Log::error('Fallback extraction failed: ' . $fallbackError->getMessage());
-                }
-            }
-            
+            Log::error('Error extracting m3u8 URL: ' . $e->getMessage());
             return null;
         }
     }
@@ -639,6 +637,41 @@ class PlaydedeService
             // Decodificar y luego volver a codificar correctamente la URL
             $url = urldecode($url);
             
+            // Check for skipped domains
+            $skippedDomains = ['lulu.st', 'streamplay.to'];
+            foreach ($skippedDomains as $domain) {
+                if (strpos($url, $domain) !== false) {
+                    Log::info("Skipping {$domain} domain");
+                    return null;
+                }
+            }
+
+            // Transform bigwarp.io to bgwp.cc
+            if (strpos($url, 'https://bigwarp.io/') !== false) {
+                $url = str_replace('bigwarp.io', 'bgwp.cc', $url);
+                Log::info('Transformed bigwarp.io URL to: ' . $url);
+            }
+
+            // Skip streamplay.to URLs
+            if (strpos($url, 'https://streamplay.to/') !== false) {
+                Log::info('Skipping streamplay.to URL');
+                return null;
+            }
+
+            // Transform l1afav.net/e/ to 96ar.com/d/
+            if (strpos($url, 'l1afav.net/e/') !== false) {
+                $url = str_replace('l1afav.net/e/', '96ar.com/d/', $url);
+                Log::info('Transformed l1afav.net URL to: ' . $url);
+            } else if (strpos($url, 'l1afav.net') !== false) {
+                $url = str_replace('l1afav.net', '96ar.com', $url);
+                Log::info('Transformed l1afav.net base URL to: ' . $url);
+            }
+
+            // Handle hqq.ac redirections
+            if (strpos($url, 'https://hqq.ac/') !== false) {
+                Log::info('HQQ.ac URL detected, will handle redirection in Puppeteer service');
+            }
+            
             // Asegurar que ciertos dominios problemáticos estén bien formateados
             if (strpos($url, 'vespucciland') !== false || strpos($url, 'sploosat') !== false || 
                 strpos($url, 'iplayerhls') !== false) {
@@ -653,7 +686,6 @@ class PlaydedeService
             
             return $url;
         } catch (\Exception $e) {
-            // Fix: Correct string concatenation syntax
             Log::error('Error sanitizing player URL: ' . $e->getMessage());
             return $url;
         }

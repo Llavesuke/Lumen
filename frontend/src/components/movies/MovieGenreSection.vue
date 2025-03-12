@@ -1,11 +1,13 @@
 <script>
 import MovieCard from './MovieCard.vue';
+import MovieCardSkeleton from './MovieCardSkeleton.vue';
 import { ref, watch, computed } from 'vue';
 
 export default {
   name: 'MovieGenreSection',
   components: {
-    MovieCard
+    MovieCard,
+    MovieCardSkeleton
   },
   props: {
     title: {
@@ -15,6 +17,10 @@ export default {
     movies: {
       type: Array,
       required: true
+    },
+    isLoading: {
+      type: Boolean,
+      default: false
     }
   },
   setup(props) {
@@ -169,14 +175,6 @@ export default {
       setTimeout(() => {
         container.classList.remove('movie-genre-section__carousel--transitioning');
       }, 500); // Match this with the CSS transition duration
-      
-      // Add transition class before scrolling
-      container.classList.add('movie-genre-section__carousel--transitioning');
-      
-      // Remove transition class after animation completes
-      setTimeout(() => {
-        container.classList.remove('movie-genre-section__carousel--transitioning');
-      }, 500); // Match this with the CSS transition duration
     };
     
     // Mouse drag functionality
@@ -254,11 +252,20 @@ export default {
   <section class="movie-genre-section">
     <div class="movie-genre-section__header">
       <h2 class="movie-genre-section__title">{{ title }}</h2>
-      <div class="movie-genre-section__counter" v-if="movies.length > 0">
+      <div class="movie-genre-section__counter" v-if="movies.length > 0 && !isLoading">
         {{ counterText }}
       </div>
     </div>
-    <div class="movie-genre-section__carousel-container">
+    
+    <!-- Skeleton loading when content is loading -->
+    <div v-if="isLoading" class="movie-genre-section__carousel-container">
+      <div class="movie-genre-section__carousel">
+        <MovieCardSkeleton v-for="n in 10" :key="n" class="movie-genre-section__item" />
+      </div>
+    </div>
+    
+    <!-- Content when not loading -->
+    <div v-else class="movie-genre-section__carousel-container">
       <button 
         class="movie-genre-section__nav-button movie-genre-section__nav-button--left" 
         @click="scroll('left')"
@@ -305,6 +312,7 @@ export default {
 .movie-genre-section {
   position: relative;
   padding: 0 4%;
+  margin-bottom: 2rem;
 }
 
 .movie-genre-section__header {
@@ -330,6 +338,47 @@ export default {
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
+}
+
+/* Loading spinner styles */
+.movie-genre-section__loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  width: 100%;
+  margin: 0.5rem 0 2rem;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 2rem;
+}
+
+.loading-text {
+  margin-top: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.spinner {
+  display: inline-block;
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.spinner__circle {
+  position: absolute;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--primary, #ffff68);
+  width: 100%;
+  height: 100%;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .movie-genre-section__carousel-container {
@@ -459,6 +508,10 @@ export default {
     margin-bottom: 4rem;
     position: relative;
   }
+  
+  .movie-genre-section__loading {
+    min-height: 150px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -492,6 +545,10 @@ export default {
   
   .movie-genre-section__carousel-container {
     margin-bottom: 1rem;
+  }
+  
+  .movie-genre-section__loading {
+    min-height: 120px;
   }
 }
 

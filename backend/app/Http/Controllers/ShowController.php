@@ -252,4 +252,158 @@ class ShowController extends Controller
             'favorites' => $user->user_favorites ?? []
         ], 200);
     }
+
+    /**
+     * Get all movies with pagination and filtering
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAllMovies(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'page' => 'integer|min:1',
+            'year_from' => 'integer|min:1900|max:' . date('Y'),
+            'year_to' => 'integer|min:1900|max:' . date('Y'),
+            'genres' => 'string',
+            'keywords' => 'string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $page = $request->query('page', 1);
+        $yearFrom = $request->query('year_from');
+        $yearTo = $request->query('year_to');
+        $genres = $request->query('genres') ? explode(',', $request->query('genres')) : null;
+        $keywords = $request->query('keywords') ? explode(',', $request->query('keywords')) : null;
+
+        // Create a unique cache key based on all parameters
+        $cacheKey = 'all_movies_' . $page;
+        if ($yearFrom) $cacheKey .= '_from_' . $yearFrom;
+        if ($yearTo) $cacheKey .= '_to_' . $yearTo;
+        if ($genres) $cacheKey .= '_genres_' . implode('_', $genres);
+        if ($keywords) $cacheKey .= '_keywords_' . implode('_', $keywords);
+
+        return Cache::remember($cacheKey, 3600, function () use ($page, $yearFrom, $yearTo, $genres, $keywords) {
+            $results = $this->tmdbService->getAllMovies($page, $yearFrom, $yearTo, $genres, $keywords);
+            
+            return response()->json([
+                'page' => $results['page'],
+                'total_pages' => $results['total_pages'],
+                'total_results' => $results['total_results'],
+                'results' => $results['results']
+            ], 200);
+        });
+    }
+
+    /**
+     * Get trending movies for a time window
+     *
+     * @param Request $request
+     * @param string $timeWindow
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTrendingMovies(Request $request, $timeWindow = 'week')
+    {
+        $validator = Validator::make($request->all(), [
+            'page' => 'integer|min:1'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $page = $request->query('page', 1);
+        $cacheKey = 'trending_movies_' . $timeWindow . '_' . $page;
+
+        return Cache::remember($cacheKey, 3600, function () use ($page, $timeWindow) {
+            $results = $this->tmdbService->getTrending('movie', $timeWindow, $page);
+            
+            return response()->json([
+                'page' => $results['page'],
+                'total_pages' => $results['total_pages'],
+                'total_results' => $results['total_results'],
+                'results' => $results['results']
+            ], 200);
+        });
+    }
+
+    /**
+     * Get trending TV shows for a time window
+     *
+     * @param Request $request
+     * @param string $timeWindow
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTrendingTvShows(Request $request, $timeWindow = 'week')
+    {
+        $validator = Validator::make($request->all(), [
+            'page' => 'integer|min:1'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $page = $request->query('page', 1);
+        $cacheKey = 'trending_tv_' . $timeWindow . '_' . $page;
+
+        return Cache::remember($cacheKey, 3600, function () use ($page, $timeWindow) {
+            $results = $this->tmdbService->getTrending('tv', $timeWindow, $page);
+            
+            return response()->json([
+                'page' => $results['page'],
+                'total_pages' => $results['total_pages'],
+                'total_results' => $results['total_results'],
+                'results' => $results['results']
+            ], 200);
+        });
+    }
+
+    /**
+     * Get all series with pagination and filtering
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAllSeries(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'page' => 'integer|min:1',
+            'year_from' => 'integer|min:1900|max:' . date('Y'),
+            'year_to' => 'integer|min:1900|max:' . date('Y'),
+            'genres' => 'string',
+            'keywords' => 'string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $page = $request->query('page', 1);
+        $yearFrom = $request->query('year_from');
+        $yearTo = $request->query('year_to');
+        $genres = $request->query('genres') ? explode(',', $request->query('genres')) : null;
+        $keywords = $request->query('keywords') ? explode(',', $request->query('keywords')) : null;
+
+        // Create a unique cache key based on all parameters
+        $cacheKey = 'all_series_' . $page;
+        if ($yearFrom) $cacheKey .= '_from_' . $yearFrom;
+        if ($yearTo) $cacheKey .= '_to_' . $yearTo;
+        if ($genres) $cacheKey .= '_genres_' . implode('_', $genres);
+        if ($keywords) $cacheKey .= '_keywords_' . implode('_', $keywords);
+
+        return Cache::remember($cacheKey, 3600, function () use ($page, $yearFrom, $yearTo, $genres, $keywords) {
+            $results = $this->tmdbService->getAllSeries($page, $yearFrom, $yearTo, $genres, $keywords);
+            
+            return response()->json([
+                'page' => $results['page'],
+                'total_pages' => $results['total_pages'],
+                'total_results' => $results['total_results'],
+                'results' => $results['results']
+            ], 200);
+        });
+    }
 }

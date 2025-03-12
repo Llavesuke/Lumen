@@ -117,6 +117,7 @@ export default {
     :data-type="movie.type"
     :data-formatted-title="movie.formatted_title"
     :class="{ 'movie-card--active': isActive }"
+    @click="navigateToDetails"
   >
     <div class="movie-card__inner" :style="backgroundStyle">
       <div class="movie-card__overlay" :class="{ 'movie-card__overlay--active': showHoverState }">
@@ -130,11 +131,11 @@ export default {
     <!-- Botones de acción fuera de la tarjeta, visibles solo al hacer hover -->
     <div class="movie-card__action-buttons-container" v-if="showHoverState">
       <div class="movie-card__action-buttons">
-        <button class="movie-card__action-button movie-card__action-button--play" @click="playMovie">
+        <button class="movie-card__action-button movie-card__action-button--play" @click.stop="playMovie">
           <i class="fas fa-play"></i>
           <span>Ver ahora</span>
         </button>
-        <button @click="navigateToDetails" class="movie-card__action-button movie-card__action-button--info">
+        <button @click.stop="navigateToDetails" class="movie-card__action-button movie-card__action-button--info">
           <i class="fas fa-info-circle"></i>
           <span>Detalles</span>
         </button>

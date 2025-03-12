@@ -32,12 +32,19 @@
     </style>
 </head>
 <body>
-    <video id="video" controls autoplay></video>
+    <video id="video" controls autoplay muted></video>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const urlParams = new URLSearchParams(window.location.search);
             const videoUrl = urlParams.get('url');
             const video = document.getElementById('video');
+            
+            // Add click event listener to unmute video
+            document.addEventListener('click', function() {
+                if (video.muted) {
+                    video.muted = false;
+                }
+            }, { once: true });
             
             if (!videoUrl) {
                 showError('No se proporcionó URL de video');

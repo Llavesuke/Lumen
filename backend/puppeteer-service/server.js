@@ -13,8 +13,10 @@ async function getM3U8Url(playerUrl) {
     try {
         console.log(`Starting Puppeteer to extract m3u8 URL from: ${playerUrl}`);
         
+        // For hqq.ac domains, we'll use non-headless mode to handle redirections better
+        const isHQQDomain = playerUrl.includes('hqq.ac');
         browser = await puppeteer.launch({ 
-            headless: "new",
+            headless: isHQQDomain ? false : "new",
             args: [
                 '--disable-web-security', 
                 '--no-sandbox', 
@@ -33,15 +35,59 @@ async function getM3U8Url(playerUrl) {
         page.setDefaultNavigationTimeout(15000);
         page.setDefaultTimeout(15000);
         
+        // Track redirections for hqq.ac domain
+        let finalUrl = playerUrl;
+        if (isHQQDomain) {
+            // Track both frame navigation and page navigation
+            page.on('framenavigated', async (frame) => {
+                if (frame === page.mainFrame()) {
+                    const currentUrl = frame.url();
+                    console.log('Frame navigated to:', currentUrl);
+                    if (currentUrl !== playerUrl && currentUrl !== finalUrl) {
+                        finalUrl = currentUrl;
+                        console.log('Updated final URL to:', finalUrl);
+                    }
+                }
+            });
+
+            // Also track regular navigation events
+            page.on('load', async () => {
+                const currentUrl = page.url();
+                console.log('Page loaded at URL:', currentUrl);
+                if (currentUrl !== playerUrl && currentUrl !== finalUrl) {
+                    finalUrl = currentUrl;
+                    console.log('Updated final URL to:', finalUrl);
+                }
+            });
+        }
+        
         // Navegar a la URL del reproductor
         console.log(`Navigating to player URL: ${playerUrl}`);
         
         try {
             await page.goto(playerUrl, { 
-                waitUntil: 'domcontentloaded',
+                waitUntil: isHQQDomain ? 'networkidle2' : 'domcontentloaded',
                 timeout: 15000
             });
             console.log('Page loaded successfully');
+            
+            // For hqq.ac, wait for network to be idle and additional time for redirections
+            if (isHQQDomain) {
+                // Wait for network to be idle first
+                await page.waitForNetworkIdle({ timeout: 5000 }).catch(e => 
+                    console.warn('Network idle timeout, but continuing:', e.message)
+                );
+                
+                // Additional wait to ensure all redirections complete
+                await page.waitForTimeout(3000);
+                console.log('Final URL after redirections:', finalUrl);
+                
+                // Update playerUrl to the final URL for m3u8 extraction
+                if (finalUrl && finalUrl !== playerUrl) {
+                    console.log('Using final redirected URL for extraction:', finalUrl);
+                    playerUrl = finalUrl;
+                }
+            }
         } catch (navError) {
             console.warn('Navigation may have issues but continuing:', navError.message);
         }

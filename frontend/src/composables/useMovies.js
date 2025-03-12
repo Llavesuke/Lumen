@@ -6,6 +6,15 @@ export function useMovies() {
 
   const loading = ref(false);
   const error = ref(null);
+  
+  // Cache storage for genres and keywords
+  const cache = {
+    genres: {},
+    keywords: {}
+  };
+  
+  // Cache expiration time (1 hour in milliseconds)
+  const CACHE_EXPIRATION = 60 * 60 * 1000;
 
   // Movie genres and keywords
   const movieGenres = [
@@ -30,12 +39,27 @@ export function useMovies() {
   ];
 
   const fetchMoviesByGenre = async (genre) => {
+    // Check if we have cached data that's still valid
+    if (cache.genres[genre] && 
+        cache.genres[genre].timestamp > Date.now() - CACHE_EXPIRATION) {
+      console.log(`Using cached data for genre: ${genre}`);
+      return cache.genres[genre].data;
+    }
+    
     loading.value = true;
     error.value = null;
     
     try {
       const response = await axios.get(`http://localhost:8000/api/v1/shows/genre/${genre}`);
-      return response.data.results;
+      const results = response.data.results;
+      
+      // Cache the results with a timestamp
+      cache.genres[genre] = {
+        data: results,
+        timestamp: Date.now()
+      };
+      
+      return results;
     } catch (err) {
       console.error('Error fetching movies by genre:', err);
       error.value = 'Error fetching movies. Please try again later.';
@@ -46,12 +70,27 @@ export function useMovies() {
   };
 
   const fetchMoviesByKeyword = async (keyword) => {
+    // Check if we have cached data that's still valid
+    if (cache.keywords[keyword] && 
+        cache.keywords[keyword].timestamp > Date.now() - CACHE_EXPIRATION) {
+      console.log(`Using cached data for keyword: ${keyword}`);
+      return cache.keywords[keyword].data;
+    }
+    
     loading.value = true;
     error.value = null;
     
     try {
       const response = await axios.get(`http://localhost:8000/api/v1/shows/keyword/${keyword}`);
-      return response.data.results;
+      const results = response.data.results;
+      
+      // Cache the results with a timestamp
+      cache.keywords[keyword] = {
+        data: results,
+        timestamp: Date.now()
+      };
+      
+      return results;
     } catch (err) {
       console.error('Error fetching movies by keyword:', err);
       error.value = 'Error fetching movies. Please try again later.';

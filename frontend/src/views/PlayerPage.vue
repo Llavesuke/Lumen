@@ -14,19 +14,19 @@
           <div v-else class="loading-title">{{ title }}</div>
           
           <!-- Logo color animation - colorea el logo de izquierda a derecha -->
-          <div class="logo-color-overlay" :style="`width: ${loadingProgress}%`">
-            <img v-if="logoImage" :src="logoImage" class="loading-logo color-img" />
-            <div v-else class="loading-title color-title">{{ title }}</div>
+          <div v-if="logoImage" class="logo-color-overlay" :style="`--loading-progress: ${loadingProgress}%`">
+            <img :src="logoImage" class="loading-logo color-img" />
           </div>
-        </div>
-        
-        <div class="loading-progress-container">
-          <div class="loading-progress" :style="`width: ${loadingProgress}%`"></div>
+          
+          <!-- Progress bar for text (when no logo) -->
+          <div v-else class="text-progress-bar-container">
+            <div class="text-progress-bar" :style="`width: ${loadingProgress}%`"></div>
+          </div>
         </div>
       </div>
       
       <div class="loading-message" v-if="error">
-        <p>{{ errorMessage }}</p>
+        <p>Este contenido no se encuentra disponible</p>
         <button @click="goBack" class="back-button">
           <i class="fas fa-arrow-left"></i> Volver atrás
         </button>
@@ -262,8 +262,8 @@ export default {
 
 .loading-logo-container {
   position: relative;
-  width: 160px;
-  height: 80px;
+  width: 400px;
+  height: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -293,9 +293,8 @@ export default {
   top: 0;
   left: 0;
   height: 100%;
-  width: 0;
+  width: 100%;
   overflow: hidden;
-  transition: width 0.3s ease;
   z-index: 1004;
 }
 
@@ -304,44 +303,68 @@ export default {
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-mask-image: linear-gradient(to right, #000 0%, #000 var(--loading-progress, 0%), transparent var(--loading-progress, 0%));
+  mask-image: linear-gradient(to right, #000 0%, #000 var(--loading-progress, 0%), transparent var(--loading-progress, 0%));
 }
 
-.color-title {
-  color: #FFCC00;
-}
+/* Removed color-title class as it's no longer needed */
 
 .loading-title {
   color: white;
-  font-size: 1.5rem;
+  font-size: 2.2rem;
   font-weight: bold;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
   text-align: center;
   z-index: 1003;
-}
-
-.loading-progress-container {
-  position: relative;
   width: 100%;
-  height: 4px;
-  background-color: rgba(255, 255, 255, 0.2);
-  margin-top: 20px;
-  border-radius: 2px;
-  overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  position: relative; /* Added to position the progress bar correctly */
 }
 
-.loading-progress {
+/* Progress bar for text (when no logo) */
+.text-progress-bar-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  background-color: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  z-index: 1004;
+}
+
+.text-progress-bar {
   height: 100%;
   background-color: #FFCC00;
   transition: width 0.3s ease;
 }
 
+/* Eliminada la barra de progreso */
+
 .loading-message {
-  margin-top: 50px;
+  margin-top: 30px;
   text-align: center;
   color: white;
   z-index: 1002;
   max-width: 80%;
   font-size: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-message p {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
 }
 
 .video-container {
@@ -411,8 +434,13 @@ export default {
 
 @media (max-width: 768px) {
   .loading-logo-container {
-    width: 140px;
-    height: 70px;
+    width: 320px;
+    height: 160px;
+  }
+  
+  .loading-title,
+  .color-title {
+    font-size: 1.8rem;
   }
   
   .player-controls {
@@ -432,12 +460,22 @@ export default {
   .player-info {
     font-size: 0.9rem;
   }
+  
+  .loading-message p {
+    font-size: 1.3rem;
+  }
 }
 
 @media (max-width: 480px) {
   .loading-logo-container {
-    width: 120px;
-    height: 60px;
+    width: 260px;
+    height: 130px;
+  }
+  
+  .loading-title,
+  .color-title {
+    font-size: 1.5rem;
+    padding: 10px;
   }
   
   .back-button {
@@ -451,6 +489,10 @@ export default {
   
   .player-info {
     font-size: 0.8rem;
+  }
+  
+  .loading-message p {
+    font-size: 1.1rem;
   }
 }
 </style>

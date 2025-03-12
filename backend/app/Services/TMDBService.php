@@ -585,4 +585,278 @@ class TMDBService
             return null;
         }
     }
+
+    /**
+     * Get all movies with pagination and filtering
+     *
+     * @param int $page
+     * @param int|null $yearFrom
+     * @param int|null $yearTo
+     * @param array|null $genres
+     * @param array|null $keywords
+     * @return array
+     */
+    public function getAllMovies($page = 1, $yearFrom = null, $yearTo = null, $genres = null, $keywords = null)
+    {
+        try {
+            $params = [
+                'language' => 'es-ES',
+                'page' => $page,
+                'sort_by' => 'popularity.desc',
+                'include_adult' => false
+            ];
+
+            // Add year range filter
+            if ($yearFrom) {
+                $params['primary_release_date.gte'] = $yearFrom . '-01-01';
+            }
+            if ($yearTo) {
+                $params['primary_release_date.lte'] = $yearTo . '-12-31';
+            }
+
+            // Add genre filter
+            if ($genres) {
+                $genreIds = [];
+                // Check if the genre values are already IDs (numeric) or names
+                $containsNumericIds = false;
+                foreach ($genres as $genre) {
+                    if (is_numeric($genre)) {
+                        $containsNumericIds = true;
+                        break;
+                    }
+                }
+                
+                if ($containsNumericIds) {
+                    // If genres are already IDs, use them directly
+                    $genreIds = $genres;
+                } else {
+                    // If genres are names, convert to IDs
+                    $genreList = $this->getGenreList('movie');
+                    foreach ($genres as $genreName) {
+                        foreach ($genreList as $genre) {
+                            if (strtolower($genre['name']) === strtolower($genreName)) {
+                                $genreIds[] = $genre['id'];
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (!empty($genreIds)) {
+                    $params['with_genres'] = implode(',', $genreIds);
+                }
+                
+                // Log the genre filter being applied
+                Log::info('Applying genre filter with IDs: ' . implode(',', $genreIds));
+            }
+
+            // Add keyword filter
+            if ($keywords) {
+                $keywordIds = [];
+                foreach ($keywords as $keyword) {
+                    $keywordResponse = Http::withHeaders($this->headers)
+                        ->get("{$this->baseUrl}/search/keyword", [
+                            'query' => $keyword,
+                            'language' => 'es-ES'
+                        ]);
+                    if ($keywordResponse->successful()) {
+                        $keywordResults = $keywordResponse->json()['results'] ?? [];
+                        if (!empty($keywordResults)) {
+                            $keywordIds[] = $keywordResults[0]['id'];
+                        }
+                    }
+                }
+                if (!empty($keywordIds)) {
+                    $params['with_keywords'] = implode(',', $keywordIds);
+                }
+            }
+
+            $response = Http::withHeaders($this->headers)
+                ->get("{$this->baseUrl}/discover/movie", $params);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return [
+                    'page' => $data['page'],
+                    'total_pages' => $data['total_pages'],
+                    'total_results' => $data['total_results'],
+                    'results' => $this->formatSearchResults($data['results'], 'movie')
+                ];
+            }
+
+            return [
+                'page' => 1,
+                'total_pages' => 1,
+                'total_results' => 0,
+                'results' => []
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error getting all movies: ' . $e->getMessage());
+            return [
+                'page' => 1,
+                'total_pages' => 1,
+                'total_results' => 0,
+                'results' => []
+            ];
+        }
+    }
+
+    /**
+     * Get trending content by media type and time window
+     * 
+     * @param string $mediaType (movie, tv, person, all)
+     * @param string $timeWindow (day, week)
+     * @param int $page
+     * @return array
+     */
+    public function getTrending($mediaType = 'movie', $timeWindow = 'week', $page = 1)
+    {
+        try {
+            $response = Http::withHeaders($this->headers)
+                ->get("{$this->baseUrl}/trending/{$mediaType}/{$timeWindow}", [
+                    'language' => 'es-ES',
+                    'page' => $page
+                ]);
+            
+            if ($response->successful()) {
+                $data = $response->json();
+                return [
+                    'page' => $data['page'],
+                    'total_pages' => $data['total_pages'],
+                    'total_results' => $data['total_results'],
+                    'results' => $this->formatSearchResults($data['results'], $mediaType === 'tv' ? 'tv' : 'movie')
+                ];
+            }
+            
+            return [
+                'page' => 1,
+                'total_pages' => 1,
+                'total_results' => 0,
+                'results' => []
+            ];
+        } catch (\Exception $e) {
+            Log::error('TMDB API trending error: ' . $e->getMessage());
+            return [
+                'page' => 1,
+                'total_pages' => 1,
+                'total_results' => 0,
+                'results' => []
+            ];
+        }
+    }
+
+    /**
+     * Get all series with pagination and filtering
+     *
+     * @param int $page
+     * @param int|null $yearFrom
+     * @param int|null $yearTo
+     * @param array|null $genres
+     * @param array|null $keywords
+     * @return array
+     */
+    public function getAllSeries($page = 1, $yearFrom = null, $yearTo = null, $genres = null, $keywords = null)
+    {
+        try {
+            $params = [
+                'language' => 'es-ES',
+                'page' => $page,
+                'sort_by' => 'popularity.desc',
+                'include_adult' => false
+            ];
+
+            // Add year range filter
+            if ($yearFrom) {
+                $params['first_air_date.gte'] = $yearFrom . '-01-01';
+            }
+            if ($yearTo) {
+                $params['first_air_date.lte'] = $yearTo . '-12-31';
+            }
+
+            // Add genre filter
+            if ($genres) {
+                $genreIds = [];
+                // Check if the genre values are already IDs (numeric) or names
+                $containsNumericIds = false;
+                foreach ($genres as $genre) {
+                    if (is_numeric($genre)) {
+                        $containsNumericIds = true;
+                        break;
+                    }
+                }
+                
+                if ($containsNumericIds) {
+                    // If genres are already IDs, use them directly
+                    $genreIds = $genres;
+                } else {
+                    // If genres are names, convert to IDs
+                    $genreList = $this->getGenreList('tv');
+                    foreach ($genres as $genreName) {
+                        foreach ($genreList as $genre) {
+                            if (strtolower($genre['name']) === strtolower($genreName)) {
+                                $genreIds[] = $genre['id'];
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (!empty($genreIds)) {
+                    $params['with_genres'] = implode(',', $genreIds);
+                }
+                
+                // Log the genre filter being applied
+                Log::info('Applying genre filter with IDs: ' . implode(',', $genreIds));
+            }
+
+            // Add keyword filter
+            if ($keywords) {
+                $keywordIds = [];
+                foreach ($keywords as $keyword) {
+                    $keywordResponse = Http::withHeaders($this->headers)
+                        ->get("{$this->baseUrl}/search/keyword", [
+                            'query' => $keyword,
+                            'language' => 'es-ES'
+                        ]);
+                    if ($keywordResponse->successful()) {
+                        $keywordResults = $keywordResponse->json()['results'] ?? [];
+                        if (!empty($keywordResults)) {
+                            $keywordIds[] = $keywordResults[0]['id'];
+                        }
+                    }
+                }
+                if (!empty($keywordIds)) {
+                    $params['with_keywords'] = implode(',', $keywordIds);
+                }
+            }
+
+            $response = Http::withHeaders($this->headers)
+                ->get("{$this->baseUrl}/discover/tv", $params);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return [
+                    'page' => $data['page'],
+                    'total_pages' => $data['total_pages'],
+                    'total_results' => $data['total_results'],
+                    'results' => $this->formatSearchResults($data['results'], 'tv')
+                ];
+            }
+
+            return [
+                'page' => 1,
+                'total_pages' => 1,
+                'total_results' => 0,
+                'results' => []
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error getting all series: ' . $e->getMessage());
+            return [
+                'page' => 1,
+                'total_pages' => 1,
+                'total_results' => 0,
+                'results' => []
+            ];
+        }
+    }
 }

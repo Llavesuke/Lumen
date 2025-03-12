@@ -1,6 +1,7 @@
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
+import { useMoviesStore } from '../../stores/movies.js';
 
 export default {
   name: 'PopularSlider',
@@ -14,15 +15,43 @@ export default {
     const isDragging = ref(false);
     const startX = ref(0);
     const scrollLeft = ref(0);
+    
+    // Get the movies store directly in setup
+    const moviesStore = useMoviesStore();
 
     const fetchPopularContent = async () => {
       loading.value = true;
       error.value = null;
       
       try {
-        const response = await axios.get('http://localhost:8000/api/v1/shows/popular');
-        // Limit to only the top 6 most popular items regardless of type (movie or series)
-        popularContent.value = (response.data.results || []).slice(0, 6);
+        // First check if the store has valid cached data
+        if (moviesStore.popularContent.length > 0 && moviesStore.isCacheValid) {
+          console.log('Using cached popular content from store');
+          popularContent.value = moviesStore.popularContent;
+          loading.value = false;
+          return;
+        }
+        
+        // If no valid cache, fetch from API
+        const [moviesResponse, seriesResponse] = await Promise.all([
+          axios.get('http://localhost:8000/api/v1/shows/popular?type=movie'),
+          axios.get('http://localhost:8000/api/v1/shows/popular?type=series')
+        ]);
+        
+        // Get top 1 movies and top 1 series (reduced from 3 each)
+        const topMovies = (moviesResponse.data.results || []).slice(0, 1);
+        const topSeries = (seriesResponse.data.results || []).slice(0, 1);
+        
+        // Make sure each item has the correct type property
+        topMovies.forEach(movie => movie.type = 'movie');
+        topSeries.forEach(series => series.type = 'series');
+        
+        // Combine and sort by popularity
+        popularContent.value = [...topMovies, ...topSeries].sort((a, b) => b.popularity - a.popularity);
+        
+        // Update the store's cache
+        moviesStore.popularContent = popularContent.value;
+        moviesStore.lastUpdated = Date.now();
       } catch (err) {
         console.error('Error fetching popular content:', err);
         error.value = 'Error fetching popular content. Please try again later.';
@@ -30,6 +59,11 @@ export default {
         loading.value = false;
       }
     };
+
+    // Compute if we should show loading skeleton
+    const showLoadingSkeleton = computed(() => {
+      return loading.value || popularContent.value.length === 0;
+    });
 
     const scroll = (direction) => {
       // Check if we're on mobile
@@ -123,7 +157,8 @@ export default {
       startDragging,
       stopDragging,
       drag,
-      isDragging
+      isDragging,
+      showLoadingSkeleton
     };
   },
   data() {
@@ -154,8 +189,9 @@ export default {
 <template>
   <section class="popular-slider">
     <!-- Loading state -->
-    <div v-if="loading" class="popular-slider__loading">
+    <div v-if="showLoadingSkeleton" class="popular-slider__loading">
       <div class="popular-slider__spinner"></div>
+      <p class="popular-slider__loading-text">Cargando contenido popular...</p>
     </div>
     
     <!-- Error state -->
@@ -369,7 +405,6 @@ export default {
   text-overflow: ellipsis;
   padding: 0;
   line-height: 1.2;
-  max-height: 100%;
 }
 
 .popular-slider__buttons {
@@ -411,8 +446,20 @@ export default {
 
 .popular-slider__loading {
   display: flex;
+  flex-direction: column;
   justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  margin-bottom: 3rem;
   padding: 2rem;
+}
+
+.popular-slider__loading-text {
+  margin-top: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .popular-slider__spinner {

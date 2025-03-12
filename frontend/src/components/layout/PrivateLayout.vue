@@ -97,8 +97,9 @@ export default {
             <img src="/assets/logo_1.svg" alt="LUMEN" class="nav__logo-img" />
           </router-link>
           <div class="nav__links" :class="{ 'nav__links--active': mobileMenuOpen }">
-            <router-link to="/movies" class="nav__link" @click="mobileMenuOpen = false">Películas</router-link>
-            <router-link to="/series" class="nav__link" @click="mobileMenuOpen = false">Series</router-link>
+            <router-link to="/movies" class="nav__link" @click="mobileMenuOpen = false">Inicio</router-link>
+            <router-link to="/all-movies" class="nav__link" @click="mobileMenuOpen = false">Películas</router-link>
+            <router-link to="/all-series" class="nav__link" @click="mobileMenuOpen = false">Series</router-link>
             <router-link to="/my-list" class="nav__link" @click="mobileMenuOpen = false">Mi Lista</router-link>
           </div>
         </div>
