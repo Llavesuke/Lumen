@@ -218,7 +218,7 @@ export default {
     // Fetch user's lists
     const fetchUserLists = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/v1/lists');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/lists`);
         if (response.data && response.data.lists) {
           userLists.value = response.data.lists;
         } else {
@@ -234,7 +234,7 @@ export default {
     // Fetch public lists
     const fetchPublicLists = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/v1/lists/public');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/lists/public`);
         if (response.data && response.data.lists) {
           publicLists.value = response.data.lists;
         } else {
@@ -259,7 +259,7 @@ export default {
       isSubmitting.value = true;
       
       try {
-        const response = await axios.post('http://localhost:8000/api/v1/lists', newList.value);
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/v1/lists`, newList.value);
         
         // Refresh user lists
         await fetchUserLists();
@@ -295,7 +295,7 @@ export default {
       isDeleting.value = true;
       
       try {
-        await axios.delete(`http://localhost:8000/api/v1/lists/${listToDelete.value}`);
+        await axios.delete(`${import.meta.env.VITE_API_URL}/api/v1/lists/${listToDelete.value}`);
         
         // Refresh user lists
         await fetchUserLists();

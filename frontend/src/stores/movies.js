@@ -128,8 +128,8 @@ export const useMoviesStore = defineStore('movies', {
       try {
         // Fetch both trending movies and series separately
         const [moviesResponse, seriesResponse] = await Promise.all([
-          axios.get('http://localhost:8000/api/v1/trending/movie/week'),
-          axios.get('http://localhost:8000/api/v1/trending/tv/week')
+          axios.get(`${import.meta.env.VITE_API_URL}/api/v1/trending/movie/week`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/v1/trending/tv/week`)
         ]);
         
         // Get top 3 movies and top 3 series (changed from 1 each to 3 each)
@@ -261,7 +261,7 @@ export const useMoviesStore = defineStore('movies', {
       this.error = null;
       
       try {
-        const response = await axios.get(`http://localhost:8000/api/v1/shows/genre/${genre}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/shows/genre/${genre}`);
         const results = response.data.results;
         
         // Store in cache
@@ -293,7 +293,7 @@ export const useMoviesStore = defineStore('movies', {
       this.error = null;
       
       try {
-        const response = await axios.get(`http://localhost:8000/api/v1/shows/keyword/${keyword}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/shows/keyword/${keyword}`);
         const results = response.data.results;
         
         // Store in cache

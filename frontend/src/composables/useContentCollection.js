@@ -67,11 +67,11 @@ export function useContentCollection(contentType) {
       if (filters.value.contentSource === 'popular') {
         // Use trending endpoint for popular content
         const mediaType = contentType === 'movie' ? 'movie' : 'tv';
-        url = `http://localhost:8000/api/v1/trending/${mediaType}/week?page=${currentPage.value}`;
+        url = `${import.meta.env.VITE_API_URL}/api/v1/trending/${mediaType}/week?page=${currentPage.value}`;
       } else {
         // Use all-movies or all-series endpoint for full catalog
         const endpoint = contentType === 'movie' ? 'all-movies' : 'all-series';
-        url = `http://localhost:8000/api/v1/${endpoint}?page=${currentPage.value}`;
+        url = `${import.meta.env.VITE_API_URL}/api/v1/${endpoint}?page=${currentPage.value}`;
         
         // Add filters
         if (filters.value.yearRange && filters.value.yearRange.length === 2) {

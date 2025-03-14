@@ -28,7 +28,7 @@ export function useSearch() {
     searchQuery.value = query;
     
     try {
-      const response = await axios.get(`http://localhost:8000/api/v1/shows/search?query=${encodeURIComponent(query)}`);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/shows/search?query=${encodeURIComponent(query)}`);
       searchResults.value = response.data.results || [];
     } catch (err) {
       console.error('Error searching content:', err);

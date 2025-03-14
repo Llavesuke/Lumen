@@ -71,6 +71,15 @@ COPY --chown=www:www . /var/www
 # Generate optimized autoloader and run scripts
 RUN composer dump-autoload --optimize
 
+# Install dependencies
+RUN composer install --optimize-autoloader
+
+# Copy existing application directory contents and set permissions
+COPY --chown=www:www . /var/www
+
+# Generate optimized autoloader and run scripts
+RUN composer dump-autoload --optimize
+
 # Set proper permissions
 RUN chmod -R 775 /var/www/storage
 RUN chmod -R 775 /var/www/vendor

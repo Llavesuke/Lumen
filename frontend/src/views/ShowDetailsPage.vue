@@ -62,8 +62,8 @@ export default {
       try {
         const tmdbId = route.params.id;
         const endpoint = isMovie.value 
-          ? `http://localhost:8000/api/v1/movies/${tmdbId}` 
-          : `http://localhost:8000/api/v1/series/${tmdbId}`;
+          ? `${import.meta.env.VITE_API_URL}/api/v1/movies/${tmdbId}` 
+          : `${import.meta.env.VITE_API_URL}/api/v1/series/${tmdbId}`;
         
         const response = await axios.get(endpoint);
         content.value = isMovie.value ? response.data.movie : response.data.series;
@@ -110,7 +110,7 @@ export default {
             episode: 1,
             background_image: content.value?.background_image || '',
             logo_image: content.value?.logo_image || '',
-            apiUrl: `http://localhost:8000/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=1&episode=1`
+            apiUrl: `${import.meta.env.VITE_API_URL}/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=1&episode=1`
           }
         });
       } else {
@@ -123,7 +123,7 @@ export default {
             type: 'movie',
             background_image: content.value?.background_image || '',
             logo_image: content.value?.logo_image || '',
-            apiUrl: `http://localhost:8000/api/v1/playdede/movie?title=${formattedTitle}&tmdb_id=${tmdbId}`
+            apiUrl: `${import.meta.env.VITE_API_URL}/api/v1/playdede/movie?title=${formattedTitle}&tmdb_id=${tmdbId}`
           }
         });
       }
@@ -147,7 +147,7 @@ export default {
           episode: episode,
           background_image: content.value?.background_image || '',
           logo_image: content.value?.logo_image || '',
-          apiUrl: `http://localhost:8000/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=${season}&episode=${episode}`
+          apiUrl: `${import.meta.env.VITE_API_URL}/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=${season}&episode=${episode}`
         }
       });
     };
@@ -165,7 +165,7 @@ export default {
     // Check if show is in favorites on page load
     const checkFavoriteStatus = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/v1/favorites', {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/favorites`, {
           headers: { Authorization: `Bearer ${authStore.token}` }
         });
         
@@ -200,8 +200,8 @@ export default {
         };
 
         const endpoint = liked.value
-          ? `http://localhost:8000/api/v1/favorites/${route.params.id}`
-          : 'http://localhost:8000/api/v1/favorites';
+          ? `${import.meta.env.VITE_API_URL}/api/v1/favorites/${route.params.id}`
+          : `${import.meta.env.VITE_API_URL}/api/v1/favorites`;
         
         const method = liked.value ? 'delete' : 'post';
 

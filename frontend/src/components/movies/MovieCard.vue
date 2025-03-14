@@ -62,7 +62,7 @@ export default {
             episode: 1,
             background_image: props.movie.background_image,
             logo_image: props.movie.logo_image,
-            apiUrl: `http://localhost:8000/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=1&episode=1`
+            apiUrl: `${import.meta.env.VITE_API_URL}/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=1&episode=1`
           }
         });
       } else {
@@ -75,7 +75,7 @@ export default {
             type: 'movie',
             background_image: props.movie.background_image,
             logo_image: props.movie.logo_image,
-            apiUrl: `http://localhost:8000/api/v1/playdede/movie?title=${formattedTitle}&tmdb_id=${tmdbId}`
+            apiUrl: `${import.meta.env.VITE_API_URL}/api/v1/playdede/movie?title=${formattedTitle}&tmdb_id=${tmdbId}`
           }
         });
       }

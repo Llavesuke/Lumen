@@ -42,8 +42,8 @@ export default {
         
         // If no valid cache, fetch from API
         const [moviesResponse, seriesResponse] = await Promise.all([
-          axios.get('http://localhost:8000/api/v1/trending/movie/week'),
-          axios.get('http://localhost:8000/api/v1/trending/tv/week')
+          axios.get(`${import.meta.env.VITE_API_URL}/api/v1/trending/movie/week`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/v1/trending/tv/week`)
         ]);
         
         // Get top 3 movies and top 3 series (changed from 1 each to 3 each)
@@ -211,7 +211,7 @@ export default {
             episode: 1,
             background_image: item.background_image || '',
             logo_image: item.logo_image || '',
-            apiUrl: `http://localhost:8000/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=1&episode=1`
+            apiUrl: `${import.meta.env.VITE_API_URL}/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=1&episode=1`
           }
         });
       } else {
@@ -224,7 +224,7 @@ export default {
             type: 'movie',
             background_image: item.background_image || '',
             logo_image: item.logo_image || '',
-            apiUrl: `http://localhost:8000/api/v1/playdede/movie?title=${formattedTitle}&tmdb_id=${tmdbId}`
+            apiUrl: `${import.meta.env.VITE_API_URL}/api/v1/playdede/movie?title=${formattedTitle}&tmdb_id=${tmdbId}`
           }
         });
       }

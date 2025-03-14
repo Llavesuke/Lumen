@@ -19,7 +19,7 @@ export default {
 
     const fetchFavorites = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/v1/favorites', {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/favorites`, {
           headers: { Authorization: `Bearer ${authStore.token}` }
         });
         favorites.value = response.data.favorites || [];

@@ -100,7 +100,7 @@ function useShowsCollection() {
         params.keywords = filters.value.keywords.join(',');
       }
       
-      const response = await axios.get('http://localhost:8000/api/v1/movies', { params });
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/movies`, { params });
       
       shows.value = response.data.results || [];
       totalPages.value = response.data.total_pages || 0;
@@ -163,7 +163,7 @@ function useShowsCollection() {
         params.keywords = filters.value.keywords.join(',');
       }
       
-      const response = await axios.get('http://localhost:8000/api/v1/series', { params });
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/series`, { params });
       
       shows.value = response.data.results || [];
       totalPages.value = response.data.total_pages || 0;
@@ -201,7 +201,7 @@ function useShowsCollection() {
     }
     
     try {
-      let url = `http://localhost:8000/api/v1/all-movies?page=${queryParams.page || 1}`;
+      let url = `${import.meta.env.VITE_API_URL}/api/v1/all-movies?page=${queryParams.page || 1}`;
       
       if (queryParams.year_from) url += `&year_from=${queryParams.year_from}`;
       if (queryParams.year_to) url += `&year_to=${queryParams.year_to}`;
@@ -246,7 +246,7 @@ function useShowsCollection() {
     }
     
     try {
-      let url = `http://localhost:8000/api/v1/all-series?page=${queryParams.page || 1}`;
+      let url = `${import.meta.env.VITE_API_URL}/api/v1/all-series?page=${queryParams.page || 1}`;
       
       if (queryParams.year_from) url += `&year_from=${queryParams.year_from}`;
       if (queryParams.year_to) url += `&year_to=${queryParams.year_to}`;

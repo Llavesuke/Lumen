@@ -131,7 +131,7 @@ export default {
       error.value = null;
       
       try {
-        const response = await axios.get('http://localhost:8000/api/v1/lists');
+        const response = await axios.get('${import.meta.env.VITE_API_URL}/api/v1/lists');
         lists.value = response.data.lists;
       } catch (err) {
         console.error('Error fetching lists:', err);
@@ -162,7 +162,7 @@ export default {
         
         console.log('Sending data to API:', showData);
         
-        await axios.post(`http://localhost:8000/api/v1/lists/${listId}/shows`, showData);
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/v1/lists/${listId}/shows`, showData);
         
         // Show success message
         successMessage.value = 'Añadido a la lista correctamente';
@@ -213,7 +213,7 @@ export default {
       error.value = null;
       
       try {
-        const response = await axios.post('http://localhost:8000/api/v1/lists', newList.value);
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/v1/lists`, newList.value);
         
         // Add the show to the newly created list
         await addToList(response.data.list.id);

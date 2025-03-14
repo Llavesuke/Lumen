@@ -139,12 +139,12 @@ export default {
       
       try {
         // First try to get the list as a user's list
-        const response = await axios.get(`http://localhost:8000/api/v1/lists/${listId}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/lists/${listId}`);
         list.value = response.data.list;
       } catch (err) {
         // If that fails, it might be a public list
         try {
-          const publicListsResponse = await axios.get('http://localhost:8000/api/v1/lists/public');
+          const publicListsResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/lists/public`);
           const publicList = publicListsResponse.data.lists.find(l => l.id.toString() === listId.toString());
           
           if (publicList) {
@@ -173,7 +173,7 @@ export default {
       isDeleting.value = true;
       
       try {
-        await axios.delete(`http://localhost:8000/api/v1/lists/${list.value.id}`);
+        await axios.delete(`${import.meta.env.VITE_API_URL}/api/v1/lists/${list.value.id}`);
         
         // Redirigir a la página de listas
         router.push('/lists');

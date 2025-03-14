@@ -72,7 +72,7 @@ export function useMovies() {
     error.value = null;
     
     try {
-      const response = await axios.get(`http://localhost:8000/api/v1/shows/genre/${genre}`);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/shows/genre/${genre}`);
       const results = response.data.results;
       
       // Cache the results with a timestamp
@@ -108,7 +108,7 @@ export function useMovies() {
     error.value = null;
     
     try {
-      const response = await axios.get(`http://localhost:8000/api/v1/shows/keyword/${keyword}`);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/shows/keyword/${keyword}`);
       const results = response.data.results;
       
       // Cache the results with a timestamp
