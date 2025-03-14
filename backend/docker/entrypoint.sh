@@ -8,8 +8,13 @@ done
 
 cd /var/www
 
-# Ensure proper permissions
-chown -R www:www /var/www/storage
+# Install dependencies if vendor directory is empty
+if [ ! -d "/var/www/vendor" ] || [ -z "$(ls -A /var/www/vendor)" ]; then
+    composer install --no-interaction
+fi
+
+# Set proper permissions
+chown -R www-data:www-data /var/www/storage
 chmod -R 775 /var/www/storage
 
 # Clear cache and optimize

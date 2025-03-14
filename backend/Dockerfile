@@ -34,19 +34,30 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN groupadd -g 1000 www
 RUN useradd -u 1000 -ms /bin/bash -g www www
 
-# Create necessary directories and set permissions
+# Create necessary directories
 RUN mkdir -p /var/www/storage/framework/{cache,sessions,views} \
-    && mkdir -p /var/www/storage/logs
+    && mkdir -p /var/www/storage/logs \
+    && mkdir -p /var/www/vendor
 
 # Copy entrypoint script
 COPY docker/entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+# Copy composer files
+COPY composer.json composer.lock ./
+
+# Install dependencies
+RUN composer install --no-scripts --no-autoloader
+
 # Copy application code
 COPY --chown=www:www . /var/www
 
+# Generate autoloader and run scripts
+RUN composer dump-autoload --optimize
+
 # Set permissions
 RUN chown -R www:www /var/www
+RUN chmod -R 775 /var/www/storage
 
 # Switch to www user
 USER www
