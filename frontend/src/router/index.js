@@ -1,6 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { requireAuth, requireNoAuth } from './guards';
 
+/**
+ * @description Router configuration for the application.
+ * Defines all available routes and their corresponding components.
+ * Each route is protected by authentication guards where appropriate.
+ * 
+ * @typedef {Object} Route
+ * @property {string} path - The URL path for the route
+ * @property {string} name - The unique identifier for the route
+ * @property {Function} component - Lazy-loaded component for the route
+ * @property {Function} [beforeEnter] - Navigation guard for the route
+ */
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [

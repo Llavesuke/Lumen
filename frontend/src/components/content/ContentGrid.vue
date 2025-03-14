@@ -3,6 +3,14 @@ import { computed } from 'vue';
 import MovieCard from '../movies/MovieCard.vue';
 import MovieCardSkeleton from '../movies/MovieCardSkeleton.vue';
 
+/**
+ * @component ContentGrid
+ * @description A reusable grid component for displaying content items (movies or series) with pagination.
+ * Handles loading states, error states, and empty states. Provides pagination controls for navigating through results.
+ *
+ * @emits {Function} navigate-to-item - Emitted when a content item is clicked
+ * @emits {Function} page-change - Emitted when a page number is selected
+ */
 export default {
   name: 'ContentGrid',
   components: {
