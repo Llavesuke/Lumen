@@ -5,6 +5,12 @@ import PrivateLayout from '../components/layout/PrivateLayout.vue';
 import MovieCard from '../components/movies/MovieCard.vue';
 import { useSearch } from '../composables/useSearch.js';
 
+/**
+ * @component SearchPage
+ * @description Página de búsqueda que permite a los usuarios encontrar películas y series
+ * basándose en términos de búsqueda. Muestra resultados en tiempo real y gestiona
+ * diferentes estados (carga, error, sin resultados).
+ */
 export default {
   name: 'SearchPage',
   components: {
@@ -16,6 +22,10 @@ export default {
     const { searchResults, loading, error, searchContent } = useSearch();
     const searchQuery = ref('');
     
+    /**
+     * Realiza una búsqueda con el término proporcionado
+     * @param {string} query - Término de búsqueda
+     */
     const performSearch = async (query) => {
       if (query) {
         searchQuery.value = query;
@@ -197,10 +207,6 @@ export default {
   
   .search-page {
     padding: 1rem 2%;
-  }
-  
-  .search-results__item {
-    margin-bottom: 3rem;
   }
 }
 </style>

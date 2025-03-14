@@ -320,6 +320,9 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+  position: relative;
+  z-index: 10;
+  cursor: pointer;
 }
 
 .movie-genre-section__title {

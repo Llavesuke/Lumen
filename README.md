@@ -1,29 +1,102 @@
-# lumen
+# Lumen - Plataforma de Streaming
 
-This template should help get you started developing with Vue 3 in Vite.
+## Descripción del Proyecto
 
-## Recommended IDE Setup
+Lumen es una plataforma de streaming moderna desarrollada con Laravel Lumen en el backend y Vue.js en el frontend. El proyecto utiliza una arquitectura de microservicios con Docker para facilitar el despliegue y la escalabilidad.
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+### Funcionalidades Principales
 
-## Customize configuration
+- Reproducción de contenido multimedia (videos)
+- Sistema de usuarios con autenticación segura
+- Servicio de renderizado con Puppeteer para scrapear enlaces m3u8 de Playdede
+- Interfaz de usuario intuitiva y responsive
+- Base de datos MySQL para almacenamiento persistente
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+## Instrucciones de Instalación
 
-## Project Setup
+### Requisitos Previos
+
+- Docker y Docker Compose instalados en su sistema
+- Git para clonar el repositorio
+
+### Pasos de Instalación
+
+1. Clone el repositorio:
 
 ```sh
-npm install
+git clone [url-del-repositorio]
+cd lumen
 ```
 
-### Compile and Hot-Reload for Development
+2. Configuración del entorno:
 
-```sh
-npm run dev
-```
+   **Backend (.env)**
+   
+   Copie el archivo de ejemplo y configure las variables de entorno:
 
-### Compile and Minify for Production
+   ```sh
+   cd backend
+   cp .env.example .env
+   ```
+   
+   Edite el archivo `.env` con la siguiente configuración básica:
 
-```sh
-npm run build
-```
+   ```
+   APP_NAME=Lumen
+   APP_ENV=local
+   APP_KEY=base64:your-key-here
+   APP_DEBUG=true
+   APP_URL=http://localhost:8000
+   
+   DB_CONNECTION=mysql
+   DB_HOST=db
+   DB_PORT=3306
+   DB_DATABASE=laravel
+   DB_USERNAME=laravel
+   DB_PASSWORD=password
+   ```
+
+   **Frontend (.env)**
+   
+   Asegúrese de que el archivo `.env` en la carpeta frontend contenga:
+
+   ```
+   VITE_API_URL=http://localhost:8000
+   ```
+
+3. Inicie los contenedores Docker desde la raíz del proyecto:
+
+   ```sh
+   cd ..
+   docker-compose up -d
+   ```
+
+4. Instale las dependencias y ejecute las migraciones:
+
+   ```sh
+   docker exec lumen_app composer install
+   docker exec lumen_app php artisan migrate --seed
+   ```
+
+5. Acceda a la aplicación:
+   - Frontend: http://localhost:8080
+   - API Backend: http://localhost:8000
+
+## Uso de la Aplicación
+
+- Para acceder al panel de administración, visite http://localhost:8080/
+- Credenciales por defecto: test2@example.com / password123
+
+## Comandos Útiles
+
+- Detener los contenedores: `docker-compose down`
+- Ver logs: `docker-compose logs -f`
+- Acceder al shell del contenedor: `docker exec -it lumen_app bash`
+
+## Enlace al Despliegue Público
+
+[Enlace a la aplicación en producción](https://lumen-streaming.example.com)
+
+## Licencia
+
+Este proyecto está licenciado bajo la Licencia MIT - vea el archivo LICENSE para más detalles.

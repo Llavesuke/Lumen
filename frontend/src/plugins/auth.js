@@ -1,5 +1,10 @@
 import { useAuthStore } from '../stores/auth';
 
+/**
+ * Inicializa la autenticación cargando el token y la información del usuario desde localStorage
+ * 
+ * @returns {void}
+ */
 export function initializeAuth() {
   const authStore = useAuthStore();
   const token = localStorage.getItem('token');

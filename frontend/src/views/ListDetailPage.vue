@@ -209,8 +209,14 @@ export default {
 <style scoped>
 .list-detail-page {
   padding: 2rem;
-  max-width: 1400px;
   margin: 0 auto;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0f17 0%, #1a1a2e 100%);
+}
+
+/* Apply the background to the parent layout */
+:deep(.private-layout) {
+  background: linear-gradient(135deg, #0f0f17 0%, #1a1a2e 100%);
 }
 
 .list-header {

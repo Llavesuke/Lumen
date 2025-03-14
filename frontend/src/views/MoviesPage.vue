@@ -2,17 +2,25 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import PrivateLayout from '../components/layout/PrivateLayout.vue';
 import MovieGenreSection from '../components/movies/MovieGenreSection.vue';
+import MovieGenreSectionSkeleton from '../components/movies/MovieGenreSectionSkeleton.vue';
 import PopularSlider from '../components/movies/PopularSlider.vue';
 import MovieCardSkeleton from '../components/movies/MovieCardSkeleton.vue';
 import { useMoviesStore } from '../stores/movies.js';
 import { storeToRefs } from 'pinia';
 import { useShowsCollection } from '../composables/useShowsCollection.js';
 
+/**
+ * @component MoviesPage
+ * @description Página principal de películas que muestra contenido organizado por géneros y palabras clave.
+ * Incluye un slider de contenido popular y secciones de películas agrupadas por categorías.
+ * Permite cargar contenido adicional y gestiona diferentes estados (carga, error).
+ */
 export default {
   name: 'MoviesPage',
   components: {
     PrivateLayout,
     MovieGenreSection,
+    MovieGenreSectionSkeleton,
     PopularSlider,
     MovieCardSkeleton
   },
@@ -20,7 +28,10 @@ export default {
     const moviesStore = useMoviesStore();
     const { refreshPage } = useShowsCollection();
     
-    // Destructure store properties with storeToRefs to maintain reactivity
+    /**
+     * Extrae propiedades reactivas del store utilizando storeToRefs
+     * para mantener la reactividad de las propiedades
+     */
     const { 
       moviesByGenre, 
       moviesByKeyword, 
@@ -34,18 +45,28 @@ export default {
       newSectionId
     } = storeToRefs(moviesStore);
     
-    // Computed property to determine if initial content is loading
+    /**
+     * Determina si el contenido inicial está cargando
+     * @type {import('vue').ComputedRef<boolean>}
+     */
     const loading = computed(() => {
       return Object.keys(moviesByGenre.value).length === 0 && 
              Object.keys(moviesByKeyword.value).length === 0 && 
              !error.value;
     });
     
-    // Computed property to count total number of loaded sections
+    /**
+     * Calcula el número total de secciones cargadas
+     * @type {import('vue').ComputedRef<number>}
+     */
     const totalSections = computed(() => {
       return Object.keys(moviesByGenre.value).length + Object.keys(moviesByKeyword.value).length;
     });
     
+    /**
+     * Mapeo de IDs de géneros a nombres legibles
+     * @type {Object.<string, string>}
+     */
     const genreTitles = {
       'action': 'Acción',
       'comedy': 'Comedia',
@@ -54,6 +75,10 @@ export default {
       'sci-fi': 'Ciencia Ficción'
     };
 
+    /**
+     * Mapeo de IDs de palabras clave a nombres legibles
+     * @type {Object.<string, string>}
+     */
     const keywordTitles = {
       'superhero': 'Superhéroes',
       'post-apocalyptic': 'Post-apocalíptico',
@@ -76,19 +101,30 @@ export default {
       'martial-arts': 'Artes Marciales'
     };
 
-    // Movie genres and keywords arrays for reference
+    /**
+     * Lista de géneros de películas disponibles
+     * @type {Array<string>}
+     */
     const movieGenres = [
       'action', 'adventure', 'animation', 'comedy', 'crime', 'documentary', 
       'drama', 'family', 'fantasy', 'history', 'horror', 'music', 'mystery',
       'romance', 'science-fiction', 'thriller', 'war', 'western'
     ];
 
+    /**
+     * Lista de géneros de series disponibles
+     * @type {Array<string>}
+     */
     const tvGenres = [
       'action-adventure', 'animation', 'comedy', 'crime', 'documentary',
       'drama', 'family', 'kids', 'mystery', 'reality', 'sci-fi-fantasy',
       'soap', 'talk', 'war-politics', 'western'
     ];
 
+    /**
+     * Lista de palabras clave disponibles
+     * @type {Array<string>}
+     */
     const keywords = [
       'superhero', 'post-apocalyptic', 'space', 'time-travel',
       'cyberpunk', 'sitcom', 'workplace-comedy', 'period-drama', 'medical-drama',
@@ -96,7 +132,10 @@ export default {
       'thriller', 'psychological', 'heist', 'spy', 'martial-arts'
     ];
     
-    // Function to load additional content when button is clicked
+    /**
+     * Carga contenido adicional cuando se hace clic en el botón
+     * @returns {Promise<void>}
+     */
     const loadAdditionalContent = async () => {
       // Use the store's loadAdditionalContent method
       await moviesStore.loadAdditionalContent(movieGenres, tvGenres, keywords);
@@ -169,53 +208,80 @@ export default {
 
         <!-- Movie Sections by Genre -->
         <div class="movie-sections">
-          <!-- Movie Sections by Genre -->
-          <template v-for="(genre, index) in Object.keys(moviesByGenre)" :key="genre">
-            <MovieGenreSection 
-              v-if="moviesByGenre[genre] && moviesByGenre[genre].length > 0"
+          <!-- Skeleton sections for genres when loading -->
+          <template v-if="Object.keys(moviesByGenre).length === 0 && !error">
+            <MovieGenreSectionSkeleton 
+              v-for="genre in ['action', 'comedy', 'drama', 'animation', 'sci-fi']"
+              :key="genre"
               :title="genreTitles[genre] || genre"
-              :movies="moviesByGenre[genre]"
-              :is-loading="loadingGenres[genre]"
+              :items-count="6"
             />
           </template>
-
+          
+          <!-- Skeleton sections for keywords when loading -->
+          <template v-if="Object.keys(moviesByKeyword).length === 0 && !error">
+            <MovieGenreSectionSkeleton 
+              v-for="keyword in ['superhero', 'space', 'thriller', 'anime', 'cyberpunk']"
+              :key="keyword"
+              :title="keywordTitles[keyword] || keyword"
+              :items-count="6"
+            />
+          </template>
+          
+          <!-- Movie Sections by Genre (actual content) -->
+          <template v-for="(genre, index) in Object.keys(moviesByGenre)" :key="genre">
+            <template v-if="moviesByGenre[genre] && moviesByGenre[genre].length > 0">
+              <MovieGenreSectionSkeleton 
+                v-if="loadingGenres[genre]"
+                :title="genreTitles[genre] || genre"
+                :items-count="6"
+              />
+              <MovieGenreSection
+                v-else
+                :title="genreTitles[genre] || genre"
+                :movies="moviesByGenre[genre]"
+                :section-id="genre"
+                section-type="genre"
+              />
+            </template>
+          </template>
+          
           <!-- Movie Sections by Keyword -->
           <template v-for="(keyword, index) in Object.keys(moviesByKeyword)" :key="keyword">
-            <MovieGenreSection 
-              v-if="moviesByKeyword[keyword] && moviesByKeyword[keyword].length > 0"
-              :title="keywordTitles[keyword] || keyword"
-              :movies="moviesByKeyword[keyword]"
-              :is-loading="loadingKeywords[keyword]"
-            />
+            <template v-if="moviesByKeyword[keyword] && moviesByKeyword[keyword].length > 0">
+              <MovieGenreSectionSkeleton 
+                v-if="loadingKeywords[keyword]"
+                :title="keywordTitles[keyword] || keyword"
+                :items-count="6"
+              />
+              <MovieGenreSection
+                v-else
+                :title="keywordTitles[keyword] || keyword"
+                :movies="moviesByKeyword[keyword]"
+                :section-id="keyword"
+                section-type="keyword"
+              />
+            </template>
           </template>
           
-          <!-- New section loading indicator with skeleton -->
-          <div v-if="addingNewSection" class="new-section-loading">
-            <h2 class="movie-genre-section__title">{{ newSectionType === 'genre' ? (genreTitles[newSectionId] || newSectionId) : (keywordTitles[newSectionId] || newSectionId) }}</h2>
-            <div class="movie-genre-section__carousel">
-              <MovieCardSkeleton v-for="n in 10" :key="n" class="movie-genre-section__item" />
-            </div>
-          </div>
+          <!-- New section being added animation -->
+          <MovieGenreSectionSkeleton 
+            v-if="addingNewSection"
+            :title="newSectionType === 'genre' ? (genreTitles[newSectionId] || newSectionId) : (keywordTitles[newSectionId] || newSectionId)"
+            :items-count="6"
+          />
           
-          <!-- Load more content button/indicator at the bottom -->
-          <div class="load-more-container" ref="loadMoreTrigger">
+          <!-- Load more content button -->
+          <div class="load-more-container" v-if="!loadedAllContent && totalSections > 0">
             <button 
-              v-if="!loading && !moviesStore.loadingAdditionalContent && !moviesStore.loadedAllContent && totalSections >= 4" 
               @click="loadAdditionalContent" 
               class="load-more-button"
+              :disabled="loadingAdditionalContent"
             >
-              <i class="fas fa-plus-circle"></i> Cargar más contenido
+              <i class="fas fa-plus-circle"></i>
+              <span v-if="loadingAdditionalContent">Cargando más contenido...</span>
+              <span v-else>Cargar más contenido</span>
             </button>
-            <div 
-              v-else-if="moviesStore.loadingAdditionalContent" 
-              class="loading-more"
-            >
-              <div class="loading-spinner"></div>
-              <p>Cargando más contenido...</p>
-            </div>
-            <p v-else-if="moviesStore.loadedAllContent" class="all-loaded-message">
-              Has visto todo el contenido disponible
-            </p>
           </div>
         </div>
       </template>
@@ -228,39 +294,22 @@ export default {
   min-height: 100vh;
   background-color: var(--background);
   background-image: linear-gradient(to bottom right, rgba(76, 29, 149, 0.1), rgba(30, 58, 138, 0.1));
-  padding-bottom: 3rem; /* Add padding to ensure content doesn't touch footer */
-  position: relative; /* Ensure proper stacking context */
-  margin-bottom: 0;
+  padding-bottom: 2rem;
 }
 
 .movie-sections {
-  padding-bottom: 3rem;
-  position: relative;
-  z-index: 2;
+  padding: 0 4%;
 }
 
-.full-page-loading {
+.full-page-loading,
+.error-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  width: 100%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  background-color: var(--background);
-  z-index: 1000;
+  height: 70vh;
   color: var(--text-secondary);
-}
-
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  color: var(--text-secondary);
+  text-align: center;
 }
 
 .loading-spinner {
@@ -277,124 +326,58 @@ export default {
   to { transform: rotate(360deg); }
 }
 
-.error-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  color: var(--text-secondary);
-  text-align: center;
-  padding: 2rem;
-}
-
 .error-icon {
   font-size: 3rem;
-  color: var(--error-color);
   margin-bottom: 1rem;
+  opacity: 0.7;
 }
 
 .retry-button {
   margin-top: 1rem;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.5rem;
+  background-color: var(--primary-color);
+  color: white;
   border: none;
   border-radius: 4px;
-  background: rgba(255, 215, 0, 0.9);
-  color: black;
-  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  transition: background-color 0.2s;
 }
 
 .retry-button:hover {
-  transform: scale(1.05);
-  background: rgba(255, 215, 0, 1);
-}
-
-/* New section loading indicator */
-.new-section-loading {
-  padding: 0 4%;
-  margin-bottom: 2rem;
-}
-
-.new-section-loading .movie-genre-section__title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 1rem;
-}
-
-.new-section-loading .movie-genre-section__carousel {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: calc((100% - 2.5rem) / 6);
-  gap: 0.5rem;
-  overflow-x: hidden;
-  padding: 0.5rem 0;
-  position: relative;
-}
-
-@media (max-width: 1400px) {
-  .new-section-loading .movie-genre-section__carousel {
-    grid-auto-columns: calc((100% - 2rem) / 5);
-  }
-}
-
-@media (max-width: 1200px) {
-  .new-section-loading .movie-genre-section__carousel {
-    grid-auto-columns: calc((100% - 1.5rem) / 4);
-  }
-}
-
-@media (max-width: 992px) {
-  .new-section-loading .movie-genre-section__carousel {
-    grid-auto-columns: calc((100% - 1rem) / 3);
-  }
-}
-
-@media (max-width: 768px) {
-  .new-section-loading .movie-genre-section__carousel {
-    grid-auto-columns: calc((100% - 0.5rem) / 2);
-  }
-}
-
-@media (max-width: 480px) {
-  .new-section-loading .movie-genre-section__carousel {
-    grid-auto-columns: 85%;
-    gap: 0.5rem;
-    padding: 0 7.5%;
-  }
+  background-color: var(--primary-color-dark);
 }
 
 .popular-slider-loading {
-  min-height: 300px;
-  background-color: rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  margin-bottom: 3rem;
-  overflow: hidden;
+  padding: 2rem 4%;
 }
 
 .skeleton-row {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  padding: 1rem;
+  height: 300px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
 }
 
 .skeleton-item {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: 250px;
-  background: linear-gradient(110deg, rgba(255, 255, 255, 0.03) 8%, rgba(255, 255, 255, 0.06) 18%, rgba(255, 255, 255, 0.03) 33%);
+  height: 100%;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.03) 0%, 
+    rgba(255, 255, 255, 0.06) 50%, 
+    rgba(255, 255, 255, 0.03) 100%);
   background-size: 200% 100%;
-  animation: shine 1.5s infinite linear;
-  border-radius: 8px;
+  animation: shimmer 1.5s infinite;
 }
 
-@keyframes shine {
+@keyframes shimmer {
   to {
     background-position-x: -200%;
   }

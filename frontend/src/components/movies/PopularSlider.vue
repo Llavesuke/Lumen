@@ -2,9 +2,14 @@
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useMoviesStore } from '../../stores/movies.js';
+import { useRouter } from 'vue-router';
+import AddToListModal from '../lists/AddToListModal.vue';
 
 export default {
   name: 'PopularSlider',
+  components: {
+    AddToListModal
+  },
   setup() {
     const popularContent = ref([]);
     const loading = ref(true);
@@ -15,6 +20,9 @@ export default {
     const isDragging = ref(false);
     const startX = ref(0);
     const scrollLeft = ref(0);
+    const router = useRouter();
+    const showAddToListModal = ref(false);
+    const selectedShow = ref(null);
     
     // Get the movies store directly in setup
     const moviesStore = useMoviesStore();
@@ -34,13 +42,13 @@ export default {
         
         // If no valid cache, fetch from API
         const [moviesResponse, seriesResponse] = await Promise.all([
-          axios.get('http://localhost:8000/api/v1/shows/popular?type=movie'),
-          axios.get('http://localhost:8000/api/v1/shows/popular?type=series')
+          axios.get('http://localhost:8000/api/v1/trending/movie/week'),
+          axios.get('http://localhost:8000/api/v1/trending/tv/week')
         ]);
         
-        // Get top 1 movies and top 1 series (reduced from 3 each)
-        const topMovies = (moviesResponse.data.results || []).slice(0, 1);
-        const topSeries = (seriesResponse.data.results || []).slice(0, 1);
+        // Get top 3 movies and top 3 series (changed from 1 each to 3 each)
+        const topMovies = (moviesResponse.data.results || []).slice(0, 3);
+        const topSeries = (seriesResponse.data.results || []).slice(0, 3);
         
         // Make sure each item has the correct type property
         topMovies.forEach(movie => movie.type = 'movie');
@@ -142,6 +150,12 @@ export default {
       scrollContainer.value.scrollLeft = scrollLeft.value - walk;
     };
 
+    // Close add to list modal
+    const closeAddToListModal = () => {
+      showAddToListModal.value = false;
+      selectedShow.value = null;
+    };
+
     onMounted(() => {
       fetchPopularContent();
     });
@@ -158,7 +172,10 @@ export default {
       stopDragging,
       drag,
       isDragging,
-      showLoadingSkeleton
+      showLoadingSkeleton,
+      showAddToListModal,
+      selectedShow,
+      closeAddToListModal
     };
   },
   data() {
@@ -168,12 +185,49 @@ export default {
   },
   methods: {
     addToMyList(item) {
-      // This will be implemented later
-      console.log('Add to my list:', item.tmdb_id);
+      // Set the selected show and show the modal
+      this.selectedShow = item;
+      this.showAddToListModal = true;
     },
     playContent(item) {
-      // This will be implemented later
-      console.log('Play content:', item.tmdb_id);
+      // Format the title for API URL
+      const formattedTitle = item.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/(^_|_$)/g, '');
+      
+      const tmdbId = item.tmdb_id;
+      const contentType = item.type;
+      
+      if (contentType === 'series') {
+        // If it's a series, navigate to player with season 1, episode 1
+        this.$router.push({
+          path: '/player',
+          query: {
+            title: item.title,
+            tmdb_id: tmdbId,
+            type: contentType,
+            season: 1,
+            episode: 1,
+            background_image: item.background_image || '',
+            logo_image: item.logo_image || '',
+            apiUrl: `http://localhost:8000/api/v1/playdede/series?title=${formattedTitle}&tmdb_id=${tmdbId}&season=1&episode=1`
+          }
+        });
+      } else {
+        // If it's a movie
+        this.$router.push({
+          path: '/player',
+          query: {
+            title: item.title,
+            tmdb_id: tmdbId,
+            type: 'movie',
+            background_image: item.background_image || '',
+            logo_image: item.logo_image || '',
+            apiUrl: `http://localhost:8000/api/v1/playdede/movie?title=${formattedTitle}&tmdb_id=${tmdbId}`
+          }
+        });
+      }
     },
     handleLogoError(itemId) {
       // Mark the logo as failed to load
@@ -263,6 +317,15 @@ export default {
         <i class="fas fa-chevron-right"></i>
       </button>
     </div>
+    
+    <!-- Add to list modal -->
+    <AddToListModal 
+      v-if="showAddToListModal" 
+      :isVisible="showAddToListModal" 
+      :show="selectedShow" 
+      @close="closeAddToListModal" 
+      @added="closeAddToListModal"
+    />
   </section>
 </template>
 

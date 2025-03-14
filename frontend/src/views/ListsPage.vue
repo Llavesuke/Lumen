@@ -1,6 +1,6 @@
 <template>
   <private-layout>
-    <div class="lists-page">
+    <div class="lists-page" style="background: linear-gradient(135deg, #0f0f17 0%, #1a1a2e 100%);">
       <div class="lists-header">
         <h1>Listas</h1>
         
@@ -353,7 +353,6 @@ export default {
 <style scoped>
 .lists-page {
   padding: 2rem;
-  max-width: 1400px;
   margin: 0 auto;
 }
 

@@ -63,6 +63,22 @@ services:
     networks:
       - lumen
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lumen_frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - lumen
+    environment:
+      - VITE_API_URL=http://localhost:8000
+
 networks:
   lumen:
     driver: bridge

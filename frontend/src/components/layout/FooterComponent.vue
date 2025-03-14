@@ -76,7 +76,7 @@ export default {
 
 .footer__link:hover {
   opacity: 1;
-  color: #9c6cff;
+  color: #FFCC00;
 }
 
 .footer__social {
@@ -92,7 +92,7 @@ export default {
 
 .footer__social-icon:hover {
   opacity: 1;
-  color: #9c6cff;
+  color: #FFCC00;
   transform: scale(1.2);
 }
 

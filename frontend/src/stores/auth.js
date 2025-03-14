@@ -1,18 +1,56 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
 
+/**
+ * Store para gestionar la autenticación y el estado del usuario
+ */
 export const useAuthStore = defineStore('auth', {
   state: () => ({
+    /**
+     * Información del usuario autenticado
+     * @type {Object|null}
+     */
     user: null,
+    
+    /**
+     * Token de autenticación JWT
+     * @type {string|null}
+     */
     token: null,
+    
+    /**
+     * Errores de autenticación
+     * @type {Object}
+     */
     errors: {}
   }),
   getters: {
+    /**
+     * Verifica si el usuario está autenticado
+     * @returns {boolean} Estado de autenticación
+     */
     isAuthenticated: (state) => !!state.token,
+    
+    /**
+     * Obtiene la información del usuario
+     * @returns {Object|null} Datos del usuario
+     */
     getUser: (state) => state.user,
+    
+    /**
+     * Obtiene los errores de autenticación
+     * @returns {Object} Errores
+     */
     getErrors: (state) => state.errors
   },
   actions: {
+    /**
+     * Inicia sesión con las credenciales proporcionadas
+     * @param {Object} credentials - Credenciales del usuario
+     * @param {string} credentials.email - Email del usuario
+     * @param {string} credentials.password - Contraseña del usuario
+     * @returns {Promise<boolean>} Resultado de la operación
+     */
     async login(credentials) {
       try {
         const response = await axios.post('http://localhost:8000/api/v1/login', credentials);
@@ -32,6 +70,11 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    /**
+     * Registra un nuevo usuario
+     * @param {Object} userData - Datos del nuevo usuario
+     * @returns {Promise<boolean>} Resultado de la operación
+     */
     async register(userData) {
       try {
         const response = await axios.post('http://localhost:8000/api/v1/register', userData);
@@ -51,11 +94,18 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    /**
+     * Cierra la sesión del usuario actual
+     */
     logout() {
       this.user = null;
       this.token = null;
       this.errors = {};
     },
+    
+    /**
+     * Limpia los errores de autenticación
+     */
     clearErrors() {
       this.errors = {};
     }

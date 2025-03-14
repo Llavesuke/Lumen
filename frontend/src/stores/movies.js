@@ -1,51 +1,120 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
 
+/**
+ * Store para gestionar las películas, series y contenido popular
+ * con sistema de caché y carga progresiva
+ */
 export const useMoviesStore = defineStore('movies', {
   state: () => ({
-    // Cache for movie genres and sections
+    /**
+     * Caché para películas por género y secciones
+     * @type {Object.<string, Array>}
+     */
     moviesByGenre: {},
+    
+    /**
+     * Caché para películas por palabra clave
+     * @type {Object.<string, Array>}
+     */
     moviesByKeyword: {},
+    
+    /**
+     * Contenido popular para el slider principal
+     * @type {Array}
+     */
     popularContent: [],
     
-    // Loading states
+    /**
+     * Estados de carga para géneros
+     * @type {Object.<string, boolean>}
+     */
     loadingGenres: {},
+    
+    /**
+     * Estados de carga para palabras clave
+     * @type {Object.<string, boolean>}
+     */
     loadingKeywords: {},
+    
+    /**
+     * Estado de carga para contenido popular
+     * @type {boolean}
+     */
     loadingPopular: false,
     
-    // Cache timestamp for expiration checking
+    /**
+     * Marca de tiempo para verificar expiración de caché
+     * @type {number|null}
+     */
     lastUpdated: null,
     
-    // Error states
+    /**
+     * Estado de error
+     * @type {string|null}
+     */
     error: null,
     
-    // Lazy loading state
+    /**
+     * Indica si se ha cargado todo el contenido disponible
+     * @type {boolean}
+     */
     loadedAllContent: false,
+    
+    /**
+     * Indica si se está cargando contenido adicional
+     * @type {boolean}
+     */
     loadingAdditionalContent: false,
     
-    // Flag to show loading indicator for new sections
+    /**
+     * Indica si se está añadiendo una nueva sección
+     * @type {boolean}
+     */
     addingNewSection: false,
-    newSectionType: null, // 'genre', 'keyword', or null
+    
+    /**
+     * Tipo de la nueva sección ('genre', 'keyword', o null)
+     * @type {string|null}
+     */
+    newSectionType: null,
+    
+    /**
+     * Identificador de la nueva sección
+     * @type {string|null}
+     */
     newSectionId: null,
   }),
   
   getters: {
-    // Check if cache is still valid (1 hour)
+    /**
+     * Verifica si la caché sigue siendo válida (1 hora)
+     * @returns {boolean} Estado de validez de la caché
+     */
     isCacheValid: (state) => {
       if (!state.lastUpdated) return false;
-      const CACHE_EXPIRATION = 60 * 60 * 1000; // 1 hour in milliseconds
+      const CACHE_EXPIRATION = 60 * 60 * 1000; // 1 hora en milisegundos
       return (Date.now() - state.lastUpdated) < CACHE_EXPIRATION;
     },
     
-    // Get all genre keys
+    /**
+     * Obtiene todas las claves de géneros
+     * @returns {Array<string>} Lista de claves de géneros
+     */
     allGenreKeys: (state) => Object.keys(state.moviesByGenre),
     
-    // Get all keyword keys
+    /**
+     * Obtiene todas las claves de palabras clave
+     * @returns {Array<string>} Lista de claves de palabras clave
+     */
     allKeywordKeys: (state) => Object.keys(state.moviesByKeyword),
   },
   
   actions: {
-    // Fetch popular content for slider
+    /**
+     * Obtiene contenido popular para el slider
+     * @returns {Promise<Array>} Lista de contenido popular
+     */
     async fetchPopularContent() {
       // Return cached data if valid
       if (this.popularContent.length > 0 && this.isCacheValid) {
@@ -57,15 +126,15 @@ export const useMoviesStore = defineStore('movies', {
       this.error = null;
       
       try {
-        // Fetch both popular movies and series separately
+        // Fetch both trending movies and series separately
         const [moviesResponse, seriesResponse] = await Promise.all([
-          axios.get('http://localhost:8000/api/v1/shows/popular?type=movie'),
-          axios.get('http://localhost:8000/api/v1/shows/popular?type=series')
+          axios.get('http://localhost:8000/api/v1/trending/movie/week'),
+          axios.get('http://localhost:8000/api/v1/trending/tv/week')
         ]);
         
-        // Get top 1 movies and top 1 series (reduced from 3 each)
-        const topMovies = (moviesResponse.data.results || []).slice(0, 1);
-        const topSeries = (seriesResponse.data.results || []).slice(0, 1);
+        // Get top 3 movies and top 3 series (changed from 1 each to 3 each)
+        const topMovies = (moviesResponse.data.results || []).slice(0, 3);
+        const topSeries = (seriesResponse.data.results || []).slice(0, 3);
         
         // Make sure each item has the correct type property
         topMovies.forEach(movie => movie.type = 'movie');
@@ -87,7 +156,10 @@ export const useMoviesStore = defineStore('movies', {
       }
     },
     
-    // Get popular content (for components to use)
+    /**
+     * Obtiene contenido popular (para uso de componentes)
+     * @returns {Array} Lista de contenido popular
+     */
     getPopularContent() {
       // If we have cached data and it's valid, return it immediately
       if (this.popularContent.length > 0 && this.isCacheValid) {
@@ -99,7 +171,10 @@ export const useMoviesStore = defineStore('movies', {
       return this.popularContent;
     },
     
-    // Fetch initial content for home page
+    /**
+     * Obtiene contenido inicial para la página principal
+     * @returns {Promise<Object>} Contenido organizado por géneros y palabras clave
+     */
     async fetchMoviesForHomePage() {
       // Return cached data if valid
       if (Object.keys(this.moviesByGenre).length > 0 && this.isCacheValid) {
@@ -170,7 +245,11 @@ export const useMoviesStore = defineStore('movies', {
       }
     },
     
-    // Fetch movies by genre with caching
+    /**
+     * Obtiene películas por género con sistema de caché
+     * @param {string} genre - Género de películas a buscar
+     * @returns {Promise<Array>} Lista de películas del género especificado
+     */
     async fetchMoviesByGenre(genre) {
       // Return cached data if valid
       if (this.moviesByGenre[genre] && this.isCacheValid) {
@@ -198,7 +277,11 @@ export const useMoviesStore = defineStore('movies', {
       }
     },
     
-    // Fetch movies by keyword with caching
+    /**
+     * Obtiene películas por palabra clave con sistema de caché
+     * @param {string} keyword - Palabra clave a buscar
+     * @returns {Promise<Array>} Lista de películas con la palabra clave especificada
+     */
     async fetchMoviesByKeyword(keyword) {
       // Return cached data if valid
       if (this.moviesByKeyword[keyword] && this.isCacheValid) {
@@ -226,7 +309,13 @@ export const useMoviesStore = defineStore('movies', {
       }
     },
     
-    // Load additional content as user scrolls
+    /**
+     * Carga contenido adicional a medida que el usuario desplaza la página
+     * @param {Array<string>} movieGenres - Lista de géneros de películas disponibles
+     * @param {Array<string>} tvGenres - Lista de géneros de series disponibles
+     * @param {Array<string>} keywords - Lista de palabras clave disponibles
+     * @returns {Promise<void>}
+     */
     async loadAdditionalContent(movieGenres, tvGenres, keywords) {
       if (this.loadingAdditionalContent || this.loadedAllContent) return;
       

@@ -1,7 +1,13 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
-// Create axios interceptor to add the token to all requests
+/**
+ * Configuración de interceptores de Axios para gestionar la autenticación y errores comunes
+ */
+
+/**
+ * Interceptor de solicitud para añadir el token de autenticación a todas las peticiones
+ */
 axios.interceptors.request.use(
   config => {
     const token = localStorage.getItem('token');
@@ -17,7 +23,9 @@ axios.interceptors.request.use(
   }
 );
 
-// Add response interceptor to handle common errors
+/**
+ * Interceptor de respuesta para manejar errores comunes como la expiración de sesión
+ */
 axios.interceptors.response.use(
   response => {
     return response;

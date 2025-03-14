@@ -9,7 +9,7 @@ import PlayButton from '../components/Details/PlayButton.vue';
 import ActionButtons from '../components/Details/ActionButtons.vue';
 import RatingInfo from '../components/Details/RatingInfo.vue';
 import ShowLogo from '../components/Details/ShowLogo.vue';
-import SynopsisButton from '../components/Details/SynopsisButton.vue';
+import SynopsisButton from '../components/Details/synopsisbutton.vue';
 import EpisodesList from '../components/Details/EpisodesList.vue';
 import AddToListModal from '../components/lists/AddToListModal.vue';
 

@@ -1,6 +1,11 @@
 import { ref } from 'vue';
 import axios from 'axios';
 
+/**
+ * Composable para gestionar colecciones de películas y series con paginación, filtrado y caché
+ * 
+ * @returns {Object} Estado y métodos para gestionar colecciones de contenido
+ */
 function useShowsCollection() {
   // State variables
   const shows = ref([]);
@@ -11,14 +16,20 @@ function useShowsCollection() {
   const totalResults = ref(0);
   const itemsPerPage = 18; // Changed from 16 to 18 items per page
   
-  // Filter state
+  /**
+   * Estado de filtros para las colecciones
+   * @type {import('vue').Ref<{yearRange: number[], genres: string[], keywords: string[]}>}
+   */
   const filters = ref({
     yearRange: [1900, new Date().getFullYear()],
     genres: [],
     keywords: []
   });
   
-  // Cache storage
+  /**
+   * Almacenamiento de caché para diferentes tipos de contenido
+   * @type {Object.<string, Object>}
+   */
   const cache = {
     movies: {},
     series: {},
@@ -31,17 +42,17 @@ function useShowsCollection() {
   const CACHE_EXPIRATION = 30 * 60 * 1000;
   
   /**
-   * Refreshes the current page by reloading the window
-   * This will cause a complete page refresh, fetching all data from scratch
+   * Refresca la página actual recargando la ventana
+   * Esto causará una recarga completa de la página, obteniendo todos los datos desde cero
    */
   const refreshPage = () => {
     window.location.reload();
   };
   
   /**
-   * Generates a cache key based on the current filters and pagination
-   * @param {string} type - 'movies', 'series', 'allMovies', or 'allSeries'
-   * @returns {string} The cache key
+   * Genera una clave de caché basada en los filtros actuales y la paginación
+   * @param {string} type - 'movies', 'series', 'allMovies', o 'allSeries'
+   * @returns {string} La clave de caché generada
    */
   const generateCacheKey = (type) => {
     const filtersString = JSON.stringify(filters.value);
@@ -49,7 +60,7 @@ function useShowsCollection() {
   };
   
   /**
-   * Fetches all movies with pagination and filtering
+   * Obtiene todas las películas con paginación y filtrado
    * @returns {Promise<void>}
    */
   const fetchAllMovies = async () => {
@@ -112,7 +123,7 @@ function useShowsCollection() {
   };
   
   /**
-   * Fetches all series with pagination and filtering
+   * Obtiene todas las series con paginación y filtrado
    * @returns {Promise<void>}
    */
   const fetchAllSeries = async () => {
@@ -175,9 +186,9 @@ function useShowsCollection() {
   };
 
   /**
-   * Fetches all movies for the AllMoviesPage with pagination and filtering
-   * @param {Object} queryParams - The query parameters from the route
-   * @returns {Promise<Object>} The fetched data and metadata
+   * Obtiene todas las películas para la página AllMoviesPage con paginación y filtrado
+   * @param {Object} queryParams - Los parámetros de consulta de la ruta
+   * @returns {Promise<Object>} Los datos obtenidos y metadatos
    */
   const fetchAllMoviesPage = async (queryParams) => {
     const cacheKey = `allMovies_${JSON.stringify(queryParams)}`;
@@ -199,23 +210,30 @@ function useShowsCollection() {
 
       const response = await axios.get(url);
       
+      const data = {
+        results: response.data.results || [],
+        page: response.data.page || 1,
+        total_pages: response.data.total_pages || 0,
+        total_results: response.data.total_results || 0
+      };
+      
       // Cache the results
       cache.allMovies[cacheKey] = {
-        data: response.data,
+        data,
         timestamp: Date.now()
       };
       
-      return response.data;
+      return data;
     } catch (err) {
       console.error('Error fetching all movies:', err);
-      throw err;
+      throw new Error('Error fetching all movies. Please try again later.');
     }
   };
 
   /**
-   * Fetches all series for the AllSeriesPage with pagination and filtering
-   * @param {Object} queryParams - The query parameters from the route
-   * @returns {Promise<Object>} The fetched data and metadata
+   * Obtiene todas las series para la página AllSeriesPage con paginación y filtrado
+   * @param {Object} queryParams - Los parámetros de consulta de la ruta
+   * @returns {Promise<Object>} Los datos obtenidos y metadatos
    */
   const fetchAllSeriesPage = async (queryParams) => {
     const cacheKey = `allSeries_${JSON.stringify(queryParams)}`;
@@ -237,46 +255,47 @@ function useShowsCollection() {
 
       const response = await axios.get(url);
       
+      const data = {
+        results: response.data.results || [],
+        page: response.data.page || 1,
+        total_pages: response.data.total_pages || 0,
+        total_results: response.data.total_results || 0
+      };
+      
       // Cache the results
       cache.allSeries[cacheKey] = {
-        data: response.data,
+        data,
         timestamp: Date.now()
       };
       
-      return response.data;
+      return data;
     } catch (err) {
       console.error('Error fetching all series:', err);
-      throw err;
+      throw new Error('Error fetching all series. Please try again later.');
+    }
+  };
+
+  /**
+   * Actualiza los filtros y recarga el contenido
+   * @param {Object} newFilters - Nuevos valores de filtros
+   * @param {boolean} resetPage - Si se debe reiniciar a la página 1
+   */
+  const updateFilters = (newFilters, resetPage = true) => {
+    // Update filters
+    if (newFilters.yearRange) filters.value.yearRange = newFilters.yearRange;
+    if (newFilters.genres) filters.value.genres = newFilters.genres;
+    if (newFilters.keywords) filters.value.keywords = newFilters.keywords;
+    
+    // Reset to page 1 if requested
+    if (resetPage) {
+      currentPage.value = 1;
     }
   };
   
   /**
-   * Updates the current page and fetches new data
-   * @param {number} page - The page number to navigate to
-   * @param {string} type - 'movies' or 'series'
+   * Restablece todos los filtros a sus valores predeterminados
    */
-  const goToPage = async (page, type) => {
-    currentPage.value = page;
-    if (type === 'movies') {
-      await fetchAllMovies();
-    } else if (type === 'series') {
-      await fetchAllSeries();
-    }
-  };
-  
-  /**
-   * Updates filters and resets pagination
-   * @param {Object} newFilters - The new filters to apply
-   */
-  const updateFilters = (newFilters) => {
-    filters.value = { ...filters.value, ...newFilters };
-    currentPage.value = 1; // Reset to first page when filters change
-  };
-  
-  /**
-   * Clears all filters and resets pagination
-   */
-  const clearFilters = () => {
+  const resetFilters = () => {
     filters.value = {
       yearRange: [1900, new Date().getFullYear()],
       genres: [],
@@ -284,23 +303,19 @@ function useShowsCollection() {
     };
     currentPage.value = 1;
   };
-
+  
   /**
-   * Clears the cache for a specific type
-   * @param {string} type - 'movies', 'series', 'allMovies', or 'allSeries'
+   * Cambia la página actual
+   * @param {number} page - Número de página al que navegar
    */
-  const clearCache = (type) => {
-    if (type) {
-      cache[type] = {};
-    } else {
-      // Clear all cache if no type specified
-      Object.keys(cache).forEach(key => {
-        cache[key] = {};
-      });
+  const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+      currentPage.value = page;
     }
   };
   
   return {
+    // State
     shows,
     loading,
     error,
@@ -308,15 +323,16 @@ function useShowsCollection() {
     totalPages,
     totalResults,
     filters,
+    
+    // Methods
     fetchAllMovies,
     fetchAllSeries,
     fetchAllMoviesPage,
     fetchAllSeriesPage,
-    goToPage,
     updateFilters,
-    clearFilters,
-    refreshPage,
-    clearCache
+    resetFilters,
+    goToPage,
+    refreshPage
   };
 }
 

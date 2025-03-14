@@ -1,12 +1,22 @@
 import { ref } from 'vue';
 import axios from 'axios';
 
+/**
+ * Composable para gestionar la búsqueda de contenido (películas y series)
+ * 
+ * @returns {Object} Estado y métodos para la funcionalidad de búsqueda
+ */
 export function useSearch() {
   const searchResults = ref([]);
   const loading = ref(false);
   const error = ref(null);
   const searchQuery = ref('');
 
+  /**
+   * Realiza una búsqueda de contenido con el término proporcionado
+   * @param {string} query - Término de búsqueda
+   * @returns {Promise<void>}
+   */
   const searchContent = async (query) => {
     if (!query || query.trim() === '') {
       searchResults.value = [];
@@ -29,6 +39,9 @@ export function useSearch() {
     }
   };
 
+  /**
+   * Limpia los resultados de búsqueda y el estado
+   */
   const clearSearch = () => {
     searchResults.value = [];
     searchQuery.value = '';

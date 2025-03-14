@@ -1,13 +1,21 @@
 import { ref } from 'vue';
 import axios from 'axios';
 
+/**
+ * Composable para gestionar la obtención y caché de películas y series por géneros y palabras clave
+ * 
+ * @returns {Object} Estado y métodos para gestionar colecciones de películas
+ */
 export function useMovies() {
   const movies = ref([]);
 
   const loading = ref(false);
   const error = ref(null);
   
-  // Cache storage for genres and keywords
+  /**
+   * Almacenamiento de caché para géneros y palabras clave
+   * @type {Object.<string, Object>}
+   */
   const cache = {
     genres: {},
     keywords: {}
@@ -16,21 +24,30 @@ export function useMovies() {
   // Cache expiration time (1 hour in milliseconds)
   const CACHE_EXPIRATION = 60 * 60 * 1000;
 
-  // Movie genres and keywords
+  /**
+   * Lista de géneros de películas disponibles
+   * @type {Array<string>}
+   */
   const movieGenres = [
     'action', 'adventure', 'animation', 'comedy', 'crime', 'documentary', 
     'drama', 'family', 'fantasy', 'history', 'horror', 'music', 'mystery',
     'romance', 'science-fiction', 'thriller', 'war', 'western'
   ];
 
-  // TV show genres and keywords
+  /**
+   * Lista de géneros de series disponibles
+   * @type {Array<string>}
+   */
   const tvGenres = [
     'action-adventure', 'animation', 'comedy', 'crime', 'documentary',
     'drama', 'family', 'kids', 'mystery', 'reality', 'sci-fi-fantasy',
     'soap', 'talk', 'war-politics', 'western'
   ];
 
-  // Keywords for both movies and TV shows
+  /**
+   * Lista de palabras clave disponibles para películas y series
+   * @type {Array<string>}
+   */
   const keywords = [
     'superhero', 'post-apocalyptic', 'space', 'time-travel',
     'cyberpunk', 'sitcom', 'workplace-comedy', 'period-drama', 'medical-drama',
@@ -38,6 +55,11 @@ export function useMovies() {
     'thriller', 'psychological', 'heist', 'spy', 'martial-arts'
   ];
 
+  /**
+   * Obtiene películas por género con sistema de caché
+   * @param {string} genre - Género de películas a buscar
+   * @returns {Promise<Array>} Lista de películas del género especificado
+   */
   const fetchMoviesByGenre = async (genre) => {
     // Check if we have cached data that's still valid
     if (cache.genres[genre] && 
@@ -69,6 +91,11 @@ export function useMovies() {
     }
   };
 
+  /**
+   * Obtiene películas por palabra clave con sistema de caché
+   * @param {string} keyword - Palabra clave a buscar
+   * @returns {Promise<Array>} Lista de películas con la palabra clave especificada
+   */
   const fetchMoviesByKeyword = async (keyword) => {
     // Check if we have cached data that's still valid
     if (cache.keywords[keyword] && 
@@ -100,11 +127,21 @@ export function useMovies() {
     }
   };
 
+  /**
+   * Obtiene elementos aleatorios de un array
+   * @param {Array} array - Array de elementos
+   * @param {number} count - Número de elementos a obtener
+   * @returns {Array} Subconjunto aleatorio del array original
+   */
   const getRandomItems = (array, count) => {
     const shuffled = [...array].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, count);
   };
 
+  /**
+   * Obtiene películas para la página principal, seleccionando géneros y palabras clave aleatorias
+   * @returns {Promise<Object>} Mapa de contenido organizado por géneros y palabras clave
+   */
   const fetchMoviesForHomePage = async () => {
     loading.value = true;
     error.value = null;

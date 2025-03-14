@@ -1,5 +1,6 @@
 <script>
 import { FormInput, FormButton, FormDivider } from '../components/forms';
+import { useAuthStore } from '../stores/auth';
 
 export default {
   name: 'RegisterPage',
@@ -26,6 +27,13 @@ export default {
       isLoading: false,
       termsAccepted: false
     }
+  },
+  setup() {
+    const authStore = useAuthStore();
+    
+    return { 
+      authStore
+    };
   },
   methods: {
     async handleSubmit() {
@@ -65,14 +73,28 @@ export default {
       ) {
         this.isLoading = true;
         try {
-          // Aquí se implementaría la llamada a la API para registrar al usuario
-          console.log('Registro de usuario:', this.form);
+          // Llamar al método register del auth store
+          const success = await this.authStore.register(this.form);
           
-          // Simular registro exitoso y redirección
-          setTimeout(() => {
-            this.$router.push('/login');
-          }, 1000);
-          
+          if (success) {
+            // Si el registro es exitoso, redirigir a la página de películas
+            this.$router.push('/movies');
+          } else {
+            // Si el registro falló, obtener errores del store
+            const storeErrors = this.authStore.getErrors;
+            if (storeErrors.name) {
+              this.errors.name = storeErrors.name[0];
+            }
+            if (storeErrors.email) {
+              this.errors.email = storeErrors.email[0];
+            }
+            if (storeErrors.password) {
+              this.errors.password = storeErrors.password[0];
+            }
+            if (storeErrors.general) {
+              this.errors.general = storeErrors.general[0];
+            }
+          }
         } catch (error) {
           this.errors.general = error.message || 'Error al registrar el usuario';
         } finally {
