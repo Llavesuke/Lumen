@@ -68,23 +68,17 @@ cd lumen
 
    ```sh
    cd ..
-   docker-compose up -d
+   docker-compose build
+   docker-compose up
    ```
 
-4. Instale las dependencias y ejecute las migraciones:
-
-   ```sh
-   docker exec lumen_app composer install
-   docker exec lumen_app php artisan migrate --seed
-   ```
-
-5. Acceda a la aplicación:
+4. Acceda a la aplicación:
    - Frontend: http://localhost:8080
    - API Backend: http://localhost:8000
 
 ## Uso de la Aplicación
 
-- Para acceder al panel de administración, visite http://localhost:8080/
+- Para acceder a la web, visite http://localhost:8080/
 - Credenciales por defecto: test2@example.com / password123
 
 ## Comandos Útiles
@@ -95,7 +89,7 @@ cd lumen
 
 ## Enlace al Despliegue Público
 
-[Enlace a la aplicación en producción](https://lumen-streaming.example.com)
+[Enlace a la aplicación en producción](https://lumen-5x8j.onrender.com/landing)
 
 ## Licencia
 
