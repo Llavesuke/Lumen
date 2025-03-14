@@ -42,11 +42,17 @@ RUN mkdir -p /var/www/storage/framework/{cache,sessions,views} \
 COPY docker/entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Copy composer files first
-COPY --chown=www:www composer.json composer.lock /var/www/
+# Copy application code
+COPY --chown=www:www . /var/www
+
+# Set permissions
+RUN chown -R www:www /var/www
+
+# Switch to www user
+USER www
 
 # Install dependencies
-RUN composer install --no-scripts --no-autoloader
+RUN composer install --optimize-autoloader
 
 # Copy existing application directory contents and set permissions
 COPY --chown=www:www . /var/www

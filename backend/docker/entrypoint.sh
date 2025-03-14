@@ -8,10 +8,14 @@ done
 
 cd /var/www
 
-# Install dependencies if vendor directory doesn't exist
-if [ ! -d "vendor" ]; then
-    composer install
-fi
+# Ensure proper permissions
+chown -R www:www /var/www/storage
+chmod -R 775 /var/www/storage
+
+# Clear cache and optimize
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
 
 # Run migrations
 php artisan migrate --force
